@@ -1,0 +1,11 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { color: #253d33; background: #f6f7f2; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; }
+button, select { cursor: pointer; }
+button { color: inherit; }
+button:disabled { cursor: default; opacity: .5; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #6c8b57; outline-offset: 4px; }
+button { touch-action: manipulation; }
+::selection { background: #d6e4c5; }
