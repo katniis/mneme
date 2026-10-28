@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_ENVIRONMENT, ENVIRONMENT_KEY, WEATHER_KEY, activeLocation, readEnvironmentPreferences, resolveEnvironment, type EnvironmentLocation, type EnvironmentPreferences, type WeatherSnapshot } from '../../lib/environment';
+import { DEFAULT_ENVIRONMENT, ENVIRONMENT_KEY, WEATHER_KEY, activeLocation, readEnvironmentPreferences, requiresWeather, resolveEnvironment, type EnvironmentLocation, type EnvironmentPreferences, type WeatherSnapshot } from '../../lib/environment';
 import { fetchWeather, locationKey, readWeatherCache } from '../../lib/weather';
 
 export function useEnvironment() {
@@ -37,11 +37,13 @@ export function useEnvironment() {
     requests.current.controller = null;
   }, []);
   const updatePrefs = useCallback((changes: Partial<EnvironmentPreferences>) => {
-    invalidate();
+    const next = { ...prefs, ...changes };
+    requests.current.gps++;
+    if (!requiresWeather(next, zone)) invalidate();
     setLocationStatus('');
     setWeatherStatus('');
-    setPrefs(p => ({ ...p, ...changes }));
-  }, [invalidate]);
+    setPrefs(next);
+  }, [prefs, zone, invalidate]);
   useEffect(() => {
     if (!ready) return;
     try { localStorage.setItem(ENVIRONMENT_KEY, JSON.stringify(prefs)); setStorageStatus(''); }
@@ -56,8 +58,9 @@ export function useEnvironment() {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('focus', sample); };
   }, [visible, prefs.enabled, invalidate]);
   const location = activeLocation(prefs, zone);
+  const weatherNeeded = requiresWeather(prefs, zone);
   useEffect(() => {
-    if (!ready || !visible || !prefs.enabled || !(prefs.dayNight || prefs.rain || prefs.seasons) || !location) return;
+    if (!ready || !visible || !weatherNeeded || !location) return;
     const generation = ++requests.current.generation;
     const controller = new AbortController();
     requests.current.controller = controller;
@@ -74,7 +77,7 @@ export function useEnvironment() {
       if (!controller.signal.aborted && generation === requests.current.generation) setWeatherStatus('Weather unavailable. Local time still works; retry in a minute.');
     });
     return () => { controller.abort(); };
-  }, [ready, visible, prefs, zone, now, refresh, location]);
+  }, [ready, visible, weatherNeeded, now, refresh, location]);
   const chooseLocation = useCallback((next: EnvironmentLocation) => {
     const key = locationKey(next), cached = attempts.current.get(key)?.weather ?? null;
     invalidate(); setWeather(cached); setWeatherStatus(''); setLocationStatus('');
@@ -103,6 +106,6 @@ export function useEnvironment() {
   }, [chooseLocation, invalidate]);
   useEffect(() => () => invalidate(), [invalidate]);
   const frame = useMemo(() => resolveEnvironment(now, zone, prefs, weather), [now, zone, prefs, weather]);
-  return { prefs, frame, zone, locationStatus, weatherStatus, storageStatus, weather, locationActive: !!location, updatePrefs, chooseLocation, clearLocation, useMyLocation, refreshWeather: () => { setNow(Date.now()); setRefresh(n => n + 1); } };
+  return { prefs, frame, zone, locationStatus, weatherStatus, storageStatus, weather, weatherNeeded, locationActive: !!location, updatePrefs, chooseLocation, clearLocation, useMyLocation, refreshWeather: () => { setNow(Date.now()); setRefresh(n => n + 1); } };
 }
 export type EnvironmentController = ReturnType<typeof useEnvironment>;

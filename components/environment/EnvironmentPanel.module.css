@@ -19,3 +19,9 @@
 .selected { margin-top: 18px; font-size: 14px; }
 .attribution { margin-top: 24px; font-size: 11px !important; }
 .panel a { color: #345f40; text-decoration: underline; }
+.choices { display: grid; gap: 8px; margin: 0 0 20px; }
+.choices label { margin-top: 10px; font-size: 13px; font-weight: 550; }
+.choices select { width: 100%; min-height: 44px; border: 1px solid #cad5c3; border-radius: 5px; padding: 9px; color: #253d33; background: #fff; font: inherit; font-size: 16px; }
+.choices small { color: #596b5b; font-size: 12px; line-height: 1.5; }
+.choices button { margin-top: 10px; }
+.choices select:disabled { opacity: .5; }
