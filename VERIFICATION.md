@@ -106,3 +106,113 @@ The new regression test first failed on the two-tree island. It now verifies a c
 In the production browser, a real letter submission expanded a two-tree fixture to three trees. Existing letter records and positions matched exactly. With tree time paused and the camera settled, early and late underside captures differed as the new supported rock layers developed. The final view was inspected from below. The production console had zero errors or warnings.
 
 New captures: `screenshots/12-unified-underside.png`, `screenshots/13a-rock-forming.png`, and `screenshots/13-expansion-shared-core.png`. Large-garden generation performance beyond eight trees was not measured; direct shoreline-distance evaluation can be replaced with a distance transform if needed at that scale.
+
+## Tree generator merge (live + variant)
+
+The live generator in `lib/tree.ts` now uses the variant's unified palettes, structural occupancy grafting, shell-filled trunks, stratified branch heights, two-segment primaries, and leader shoots. Twig and petiole wood is intentionally spaced tighter than the structural occupancy rule so consecutive nodes physically touch; the regression test applies the no-near-duplicate rule to structural wood (`size >= 0.12`) only.
+
+- `npm test`: nine passing tests, including the structural-duplicate, voxel-budget, and leader-canopy checks.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- Voxel totals per seed stayed between about 6.1k and 9.6k for the sampled seeds.
+- Browser recapture was not performed in this session: port 3000 was already occupied and the sandbox denied other listen ports. Existing screenshots therefore show the previous anatomy and should be recaptured before release.
+
+## Eight species
+
+The generator now assigns eight species by seed: Oak, Birch, Maple (autumn red), Cherry Blossom, Weeping Willow, Pine, Jacaranda, and Spruce. Cherry Blossom, Maple, and Jacaranda use the broadleaf scaffold with species palettes and silhouettes; Pine and Spruce use tiered conifer whorls; Weeping Willow uses arched branches with hanging leaf strands. Widening the selector from `% 3` to `% 8` can remap the species of an already-planted letter once; its seed, position, text, and clock are unchanged.
+
+- `npm test`: eleven passing tests, including per-species signature checks (blossom share, autumn colour, hanging elongated leaves, conifer tier shrinkage, top-weighted purple) and attachment checks across all eight species.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- Sampled voxel totals: broadleaf species about 6.8k–9.4k, Weeping Willow about 1.8k, Pine about 1.6k, Spruce about 2.8k.
+- Browser screenshots were not recaptured in this session for the same port reason above. The eight-species garden should be captured (seeds 0–7, desktop and mobile) before release; screenshots still show the previous three-species anatomy.
+
+## Leaf realism (from research/leaves.md)
+
+All ten ranked recommendations from `research/leaves.md` were implemented: sun/shade size and colour gradient with a Maple autumn shell gradient, leaf-only rotation (`Voxel.rotation`, applied in `Scene.tsx`; wood stays axis-aligned), species phyllotaxis (opposite Maple, 137.5° spiral elsewhere), anisotropic per-species leaf footprints, blossom clusters at buds instead of recoloured leaves, outer-shell bud redistribution, pine fascicles versus spruce single helical needles with cones retagged as wood, 9:1 willow leaves, and Jacaranda compound-leaf sprays with a thin rachis.
+
+- `npm test`: fourteen passing tests, including rotation, interior-versus-shell size and luminance, Maple shell redness, and pine cone kind checks.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- Sampled voxel totals (seeds 0–7): 1.8k (Willow) to 10.7k (Cherry Blossom). Across seeds 0–199 the maximum was 11,772, under the 12,000 ceiling.
+- Browser screenshots were again not recaptured: `localhost:3000` is not reachable from the sandbox. Rotated foliage in particular should be visually inspected (seeds 0–7, desktop and mobile) before release.
+
+## Tree structure (from research/trees.md)
+
+The ranked structural changes were implemented: a forkable trunk (`forkHeight`/`forkCount`) for Oak, Cherry Blossom, and Jacaranda with branches and leaders re-rooted on the limbs; a per-species crown-outline curve; drooping birch sprays and twigs; branch-, spray-, and twig-level opposite pairing for Maple; a conifer split (pine whorl dropout, upturned two-segment tips, and distal needle tufts; spruce upswept branches with hanging branchlets); willow curtains extended toward the ground with denser strands; and bark riders (dark birch base, denser cherry lenticel bands).
+
+- `npm test`: fifteen passing tests, including cherry vase openness, birch droop, and willow curtain reach.
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- Sampled voxel totals (seeds 0–7): 2.1k (Pine) to 8.9k (Birch). Across seeds 0–199 the maximum was 10,487, under the 12,000 ceiling.
+- Crown-radius bands now differentiate the species: Cherry and Oak widen toward the top, Maple peaks at mid-height, Birch narrows to the top with foliage pulled into the bottom band, and Jacaranda keeps a clear bole under a flat crown.
+- Browser screenshots were again not recaptured: `localhost:3000` is not reachable from the sandbox. The fork crotches and spruce branchlets in particular should be visually inspected (seeds 0–7, desktop and mobile) before release.
+
+## Tree selection (28 October 2026)
+
+The letter editor now offers all eight existing species and a default “Surprise me” option. A chosen species is encoded in the new tree's seed; existing letter records, seeds, positions, and clock behavior are preserved. The locally saved draft includes the choice, and older drafts or invalid saved choices fall back to “Surprise me” while retaining the letter text.
+
+- `npm test`: all 17 tests passed. The two new tests cover every species at seed boundaries, random fallback, retained variation, and letter serialization without changing existing records. Both new tests failed before implementation.
+- `npm run typecheck`: passed under Node.js 24.14.1.
+- `npm run build`: passed; browser checks used `npm start` on port 3000.
+- Production browser checks at 1440×1000 and 390×844: all nine dropdown options present; keyboard selection works; Cherry Blossom draft selection survives reload; planting Cherry Blossom and Spruce stores their correct species and retains both letter records after reload. The WebGL scene renders. Mobile selector is 296×47 pixels, with no horizontal page overflow.
+- Older drafts retain exact whitespace and default to random. An invalid stored tree choice also defaults to random. Submitting a blank body retains the selected Pine and leaves existing letters unchanged.
+- Browser console: zero errors and warnings. `git diff --check`: passed. The UI detector reported only the existing progress-bar `transition: width`, outside this change.
+- Captures: `screenshots/14-tree-selector-desktop.png`, `screenshots/15-tree-selector-mobile.png`, and `screenshots/16-tree-selection-persistence.png`. Only synthetic letters were used.
+- Mobile checks used browser viewport emulation; physical mobile hardware was not tested.
+
+## Fill gaps between joined planting areas (28 October 2026)
+
+Reproduced permanent enclosed holes in the generated footprint: the third planting left four empty cells, starting at grid coordinate `3:4`; the 25-tree footprint left 22 empty cells. The previous connectivity checks allowed these holes because the surrounding ground was still connected.
+
+`generateTerrain` now flood-fills empty space from outside the generation bounds and fills any enclosed pockets before calculating the shoreline and rock depth. Filled cells use the normal grass, soil, and rock generation, including expansion animation. The outer coastline and stored letter seeds, positions, and text are preserved. Existing gardens receive the repaired terrain when rendered again.
+
+- Regression first failed with `3 trees leave an unfilled gap at 3:4`.
+- `npm test`: all 18 tests passed. The new regression checks every garden size from 1 through 49 for one connected footprint, no enclosed empty cells, soil/rock support in every column, and retention of all previously generated solid voxel positions.
+- `npm run typecheck` and `npm run build`: passed under Node.js 24.14.1.
+- Production browser: submitted a real third planting into a synthetic two-letter garden, allowed terrain expansion to settle, and inspected the repaired join from above. Existing letter records matched exactly before/after planting and reload.
+- Visually inspected the actual 49-tree fixture at 1440×1000 and 390×844 (zoomed in on mobile); both the interface and storage reported 49 letters. The overhead surface has no enclosed holes. Mobile page width stayed 390 pixels. Browser console: zero errors and warnings.
+- Captures: `screenshots/17-island-gaps-before.png`, `screenshots/18-island-gaps-filled-desktop.png`, `screenshots/19-island-gaps-filled-49-trees.png`, and `screenshots/20-island-gaps-filled-mobile.png`. Only synthetic letters were used.
+- Physical mobile hardware and gardens larger than 49 trees were not checked. At 49 trees, the existing mobile camera framing initially places the terrain beyond the fog/view distance; zooming in makes it visible. Camera behavior was outside this terrain-gap fix.
+
+## Natural tree placement (28 October 2026)
+
+Replaced the square spiral with deterministic candidate sampling around the actual saved tree positions. Candidates use varied angles and distances, reject positions within 4.8 world units of another trunk, and favor nearby open ground with variation to avoid rows. An outward fallback guarantees space if sampled candidates are occupied. New land remains within the existing terrain-join range. Existing stored positions are never recomputed or moved; older gardens gain irregular new plantings around their saved trees.
+
+- New spacing and legacy-position tests failed before implementation. `npm test`: all 21 tests passed. Placement is deterministic across 49 plantings, with 49 distinct X coordinates and 48 distinct Z coordinates rounded to two decimals. Every new tree remains at least 4.8 units from the others and within 6 units of the existing garden.
+- Terrain regressions now cover every size from 1 through 49 for both a fresh natural layout and a garden extended from the original eight grid positions: connected ground, no enclosed holes, supported columns, and retention of all previous solid voxel positions. The coastline regression retains its original grid fixtures.
+- `npm run typecheck`, `npm run build`, and `git diff --check`: passed under Node.js 24.14.1.
+- Production browser at 1440×1000: inspected the actual 49-tree natural layout from above and verified all positions survived reload. Submitted a new Birch into a saved eight-tree grid garden; the ninth tree appeared at approximately `[5.0085, -5.1522]`, 5.0568 units from its nearest neighbor. All eight existing letter records and the new record survived planting and reload unchanged. No browser errors or warnings were recorded during that planting check.
+- Inspected the same 49-tree layout at 390×844 after zooming in; page width stayed 390 pixels. Captures: `screenshots/21-natural-tree-placement-49.png` and `screenshots/22-natural-tree-placement-mobile.png`. Fixtures contain synthetic letters only.
+- Saved trees intentionally keep their old placement. Physical mobile hardware and gardens beyond 49 trees were not tested; the previously recorded large-garden mobile camera/fog limitation remains.
+
+## Remove square dots on rock faces (28 October 2026)
+
+The small bright squares were generated mineral faceplates, not holes or a texture defect. Removed the mineral decoration voxels and their unused animation branches. Rock blocks retain the existing palette, pixel texture, solid geometry, and supported expansion.
+
+- The new regression failed before the change with 169 mineral faceplates in a three-tree fixture; it passes after their removal.
+- `npm test`: all 22 tests passed, including both 1–49-tree connectivity and ground-retention scenarios. `npm run typecheck`, `npm run build`, and `git diff --check`: passed.
+- Production browser: compared the eight-tree underside before and after at 1280×900. Inspected the repaired underside at 390×844, submitted a ninth letter on mobile, waited for expansion, and reloaded. All existing letter records and the new record were retained exactly. No browser errors or warnings; mobile document width stayed 390 pixels.
+- Captures: `screenshots/23-rock-face-spots-before.png`, `screenshots/24-rock-faces-clean-desktop.png`, and `screenshots/25-rock-faces-clean-mobile.png`. Only synthetic letters were used. Physical mobile hardware was not tested.
+
+## Delete letters, retain plots, and fell trees (28 October 2026)
+
+Implemented the approved plan in `docs/superpowers/plans/2026-10-28-tree-deletion.md`. The detail panel now offers **Delete tree and letter**, followed by **Keep letter** / **Delete permanently** confirmation. Deletion is saved before removing content or starting animation; a failed write retains the original letter and tree. Deleted title/body are absent from saved state and the transient render record.
+
+Version-1 gardens migrate to version 2 under the same storage key. An ordered permanent `plots` list records historical land independently of letters. Terrain and island bounds use plots; new planting reuses the first historical vacancy before adding land. Existing seeds, positions, surviving text, and clock settings remain intact.
+
+The displayed tree freezes at its actual growth stage, hinges into a fall, settles against structural wood contact, and dissolves in a staggered wave. Every visible block has one same-colour rising cube particle. Both use instanced meshes; invisible future blocks are omitted. The effect uses real elapsed time, finishes by 3800 ms, and has an idempotent 4500 ms cleanup fallback. Planting and another deletion are disabled while clearing. Reduced motion/unavailable WebGL skip animation; preference changes and context loss clear the transient effect.
+
+- `npm test`: **31/31 passed**. New tests were observed failing before implementation. Coverage includes version migration/validation, middle/last/all deletion, immutable survivors and clocks, permanent ground, ordered vacancy reuse, partial growth, phase boundaries, 0/1/10,000-block particle schedules, deterministic fall direction, and generated willow contact.
+- `npm run typecheck`, `npm run build`, and `git diff --check`: passed. Production browser tests used `npm start` on port 3000.
+- Core desktop flow at 1280×900: migration, Keep letter, Escape, injected garden-write failure, safe retry, planting lock, falling/settling/particle/empty-land screenshots, matching surviving records, deleted-content absence, vacancy reuse, and reload all passed. No browser errors/warnings.
+- Lifecycle checks: reduced motion, WebGL unavailable, reduced motion enabled mid-effect, reload during fall, simulated context-loss event, simulated hidden-tab cleanup, double confirmation activation, paused demo at 0.5×/1×/2×/4×, mature broadleaf/willow/conifer, and partial growth all passed with no page errors. Context loss and tab visibility were simulated; actual GPU loss was not induced.
+- Large garden: deleted all **49** synthetic letters through the UI with reduced motion/WebGL fallback for bulk deletion, retaining **49 plots** throughout. Reload with real WebGL rendered the full empty historical island; a replacement letter reused its first plot without expansion.
+- Mobile at 390×844: confirmation controls, ordinary animation, mid-effect reduced motion, retained land, and zero horizontal overflow were inspected. A real 8.24-second browser recording was decoded into a contact sheet for visual inspection. A second mobile recording verified the final willow fix.
+- Fresh review used **Sol**, as requested. It found a willow hanging-twig overlap that could clamp the fall to 0°. A real-generator regression for seeds 4 and 12 failed before the correction. Contact now uses structural wood, allowing fine twigs to bend; both willows visibly fall. All 31 tests and the final production build passed afterward; the corrected willow was checked on mobile.
+- UI detector: only the existing progress-bar `transition: width` warning, outside this feature.
+- Evidence: screenshots `26-tree-falling.png` through `39-willow-cleared-mobile.png` (available numbered captures), plus `recordings/tree-deletion.mp4`. Synthetic letters only. Physical mobile hardware, actual GPU loss, and gardens beyond 49 plots were not tested. The pre-existing large-garden mobile camera/fog limitation remains outside scope.
+
+Execution notes: used the current checkout to preserve extensive prior uncommitted changes; task commits were deferred rather than mixing that work into new commits. Task-2 browser checks were batched with final production checks to avoid an intermediate build. No outstanding review findings were deferred.
+
+At the user's subsequent request, the verified Mneme application changes were prepared for a local commit on `main`. All 31 tests passed again before committing; unrelated assets, prototypes, research, and ignore-file edits were left untouched.

@@ -14,6 +14,7 @@
 .primary { border: 0; background: var(--green); color: #fff; border-radius: 6px; display: inline-flex; gap: 10px; align-items: center; justify-content: center; padding: 13px 19px; font-size: 13px; font-weight: 550; min-height: 44px; transition: background .18s, transform .18s; }
 .primary:hover { background: #294e33; transform: translateY(-1px); }
 .primary:active { transform: translateY(0); }
+.primary:disabled, .deleteButton:disabled, .deleteConfirmation button:disabled { opacity: .6; cursor: wait; transform: none; }
 .world { position: relative; flex: 1; min-height: 450px; overflow: hidden; border-radius: 12px; background: #e9eee5; border: 1px solid #dfe5d9; }
 .canvas { position: absolute; inset: 0; cursor: grab; touch-action: none; }
 .canvas:active { cursor: grabbing; }
@@ -60,8 +61,9 @@
 .panelIntro { font-size: 13px; line-height: 1.6; color: #697660; margin: 0 0 23px; }
 .form label { font-size: 12px; font-weight: 550; display: flex; align-items: center; gap: 6px; margin: 18px 0 8px; }
 .form label span { color: #7e8975; font-size: 10px; font-weight: 400; }
-.form input, .form textarea { background: #f3f5ee; border: 1px solid #dbe2d3; color: var(--ink); border-radius: 5px; padding: 11px 12px; display: block; width: 100%; font-size: 13px; transition: border-color .15s; }
-.form input:focus, .form textarea:focus { outline: 2px solid #9aaf86; outline-offset: 1px; background: #f9faf5; }
+.form input, .form textarea, .form select { background: #f3f5ee; border: 1px solid #dbe2d3; color: var(--ink); border-radius: 5px; padding: 11px 12px; display: block; width: 100%; font-size: 13px; transition: border-color .15s; }
+.form input:focus, .form textarea:focus, .form select:focus { outline: 2px solid #9aaf86; outline-offset: 1px; background: #f9faf5; }
+.form select { min-height: 44px; }
 .form input::placeholder, .form textarea::placeholder { color: #8b9582; }
 .form textarea { min-height: 150px; resize: vertical; line-height: 1.8; }
 .form input[type='date'] { min-height: 43px; color-scheme: light; }
@@ -73,6 +75,14 @@
 .form .primary svg:last-child { margin-left: auto; }
 .draftNote { text-align: center; margin-top: 12px; }
 .species { display: block; font-size: 11px; color: #75865f; margin: 4px 0 12px; }
+.deleteButton { display: block; width: 100%; min-height: 44px; margin: 18px 0 10px; padding: 10px 12px; border: 1px solid #b98c7b; border-radius: 5px; background: transparent; color: #873d29; font-size: 12px; }
+.deleteButton:hover { background: #f7ece6; }
+.deleteConfirmation { margin: 18px 0; padding: 14px; background: #f7ece6; border-radius: 5px; color: #753d2c; }
+.deleteConfirmation p { margin: 0 0 12px; font-size: 12px; line-height: 1.7; }
+.deleteConfirmation > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.deleteConfirmation button { flex: 1; min-height: 44px; padding: 9px 12px; border: 1px solid #b98c7b; border-radius: 5px; color: #753d2c; background: #fafbf7; font-size: 12px; }
+.deleteConfirmation .danger { color: #fff; background: #873d29; border-color: #873d29; }
+.deleteButton:focus-visible, .deleteConfirmation button:focus-visible { outline: 2px solid #873d29; outline-offset: 3px; }
 .growthLabel { display: flex; justify-content: space-between; font-size: 12px; margin-top: 25px; }
 .growthLabel strong { font-weight: 500; color: #6c8257; font-variant-numeric: tabular-nums; }
 .progressTrack { height: 4px; background: #e2e9d8; border-radius: 2px; margin-top: 12px; overflow: hidden; }
@@ -151,7 +161,7 @@
   .form, .details, .collection, .about { padding: 5px 22px 20px; }
   .panel h2 { font-size: 25px; }
   .form textarea { min-height: 120px; }
-  .form input, .form textarea { font-size: 16px; }
+  .form input, .form textarea, .form select { font-size: 16px; }
   .form label { margin-top: 15px; }
   .panelIntro { margin-bottom: 15px; }
   .plantNote { margin: 15px 0; }
