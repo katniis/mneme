@@ -15,7 +15,7 @@ export function useEnvironment() {
   const [storageStatus, setStorageStatus] = useState('');
   const [refresh, setRefresh] = useState(0);
   const requests = useRef({ generation: 0, gps: 0, controller: null as AbortController | null });
-  const attempts = useRef(new Map<string, { at: number; success: boolean }>());
+  const attempts = useRef(new Map<string, { at: number; success: boolean; weather: WeatherSnapshot | null }>());
   useEffect(() => {
     setZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
     setVisible(!document.hidden);
@@ -25,7 +25,7 @@ export function useEnvironment() {
       if (saved.location) {
         const cached = readWeatherCache(localStorage.getItem(WEATHER_KEY), saved.location);
         setWeather(cached);
-        if (cached && cached.fetchedAt <= Date.now()) attempts.current.set(locationKey(saved.location), { at: cached.fetchedAt, success: true });
+        if (cached && cached.fetchedAt <= Date.now()) attempts.current.set(locationKey(saved.location), { at: cached.fetchedAt, success: true, weather: cached });
       }
     } catch { setStorageStatus('Environment settings cannot be saved in this browser.'); }
     setReady(true);
@@ -39,6 +39,7 @@ export function useEnvironment() {
   const updatePrefs = useCallback((changes: Partial<EnvironmentPreferences>) => {
     invalidate();
     setLocationStatus('');
+    setWeatherStatus('');
     setPrefs(p => ({ ...p, ...changes }));
   }, [invalidate]);
   useEffect(() => {
@@ -48,7 +49,7 @@ export function useEnvironment() {
   }, [prefs, ready]);
   useEffect(() => {
     const sample = () => { setNow(Date.now()); setZone(Intl.DateTimeFormat().resolvedOptions().timeZone); setVisible(!document.hidden); };
-    const visibility = () => { if (document.hidden) invalidate(); sample(); };
+    const visibility = () => { if (document.hidden) { invalidate(); setWeatherStatus(''); setLocationStatus(''); } sample(); };
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('focus', sample);
     const timer = visible && prefs.enabled ? window.setInterval(sample, 30000) : undefined;
@@ -62,11 +63,11 @@ export function useEnvironment() {
     requests.current.controller = controller;
     const key = locationKey(location), previous = attempts.current.get(key), time = Date.now();
     if (previous && time - previous.at < (previous.success ? 900000 : 60000)) return () => controller.abort();
-    attempts.current.set(key, { at: time, success: false });
+    attempts.current.set(key, { at: time, success: false, weather: previous?.weather ?? null });
     setWeatherStatus('Updating weather…');
     fetchWeather(location, controller.signal).then(w => {
       if (controller.signal.aborted || generation !== requests.current.generation) return;
-      attempts.current.set(key, { at: Date.now(), success: true });
+      attempts.current.set(key, { at: Date.now(), success: true, weather: w });
       setWeather(w); setNow(Date.now()); setWeatherStatus('');
       try { localStorage.setItem(WEATHER_KEY, JSON.stringify({ location: JSON.parse(key), weather: w })); } catch { setStorageStatus('Weather is available, but its cache cannot be saved.'); }
     }).catch(() => {
@@ -75,12 +76,17 @@ export function useEnvironment() {
     return () => { controller.abort(); };
   }, [ready, visible, prefs, zone, now, refresh, location]);
   const chooseLocation = useCallback((next: EnvironmentLocation) => {
-    invalidate(); setWeather(null); setWeatherStatus(''); setLocationStatus('');
-    try { localStorage.removeItem(WEATHER_KEY); } catch { /* Cache is optional. */ }
+    const key = locationKey(next), cached = attempts.current.get(key)?.weather ?? null;
+    invalidate(); setWeather(cached); setWeatherStatus(''); setLocationStatus('');
+    try {
+      if (cached) localStorage.setItem(WEATHER_KEY, JSON.stringify({ location: JSON.parse(key), weather: cached }));
+      else localStorage.removeItem(WEATHER_KEY);
+    } catch { /* Cache is optional. */ }
     setPrefs(p => ({ ...p, location: next }));
   }, [invalidate]);
   const clearLocation = useCallback(() => {
     invalidate(); setWeather(null); setWeatherStatus(''); setLocationStatus('');
+    attempts.current.clear();
     try { localStorage.removeItem(WEATHER_KEY); } catch { setStorageStatus('The old weather cache could not be cleared.'); }
     setPrefs(p => ({ ...p, location: null }));
   }, [invalidate]);

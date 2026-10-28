@@ -62,7 +62,7 @@ export function resolveEnvironment(now: number, deviceZone: string, p: Environme
       angle = (before.rise ? 0 : Math.PI) + (now - before.t) / (after.t - before.t) * Math.PI;
       distance = Math.min(now - before.t, after.t - now) / 60000;
       daylight = before.rise ? clamp(.5 + distance / 60) : clamp(.5 - distance / 60);
-    } else if (!events.length) {
+    } else {
       angle = weather.isDay ? Math.PI / 2 : Math.PI * 1.5;
       daylight = weather.isDay ? 1 : 0;
       distance = Infinity;

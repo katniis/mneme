@@ -12,12 +12,19 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
   const ambient = useRef<THREE.AmbientLight>(null!), hemi = useRef<THREE.HemisphereLight>(null!), sun = useRef<THREE.DirectionalLight>(null!), fill = useRef<THREE.DirectionalLight>(null!);
   const cloud = useRef<THREE.InstancedMesh>(null!);
   const current = useRef({ daylight: frame.daylight, clouds: frame.cloudCover, rain: frame.rainIntensity });
-  const objects = useMemo(() => ({ background: new THREE.Color(), top: new THREE.Color(), horizon: new THREE.Color(), day: new THREE.Color('#e9eee5'), night: new THREE.Color('#101b2e'), overcast: new THREE.Color('#8c9a9b'), dusk: new THREE.Color('#d1aaa0'), dummy: new THREE.Object3D(), starPositions: new Float32Array(Array.from({ length: 512 * 3 }, (_, i) => { const r = Math.sin((i + 13) * 127.1) * 43758.5453; return (r - Math.floor(r) - .5) * 2; })) }), []);
-  for (let i = 0; i < objects.starPositions.length; i += 3) {
-    const length = Math.hypot(objects.starPositions[i], objects.starPositions[i + 1], objects.starPositions[i + 2]);
-    for (let j = 0; j < 3; j++) objects.starPositions[i + j] /= length;
-  }
+  const objects = useMemo(() => {
+    const starPositions = new Float32Array(Array.from({ length: 512 * 3 }, (_, i) => {
+      const r = Math.sin((i + 13) * 127.1) * 43758.5453;
+      return (r - Math.floor(r) - .5) * 2;
+    }));
+    for (let i = 0; i < starPositions.length; i += 3) {
+      const length = Math.hypot(starPositions[i], starPositions[i + 1], starPositions[i + 2]);
+      for (let j = 0; j < 3; j++) starPositions[i + j] /= length;
+    }
+    return { background: new THREE.Color(), day: new THREE.Color('#e9eee5'), night: new THREE.Color('#101b2e'), overcast: new THREE.Color('#8c9a9b'), dusk: new THREE.Color('#d1aaa0'), dummy: new THREE.Object3D(), center: new THREE.Vector3(), starPositions };
+  }, []);
   const uniforms = useMemo(() => ({ top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() } }), []);
+  const cloudUniforms = useMemo(() => ({ opacity: { value: 0 }, cloudColor: { value: new THREE.Color('#abb8b5') } }), []);
   useEffect(() => {
     const background = new THREE.Color(), fog = new THREE.Fog('#e9eee5', 80, 190);
     const oldBackground = scene.background, oldFog = scene.fog;
@@ -45,7 +52,7 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
     uniforms.horizon.value.copy(objects.background);
     uniforms.top.value.copy(objects.background).multiplyScalar(frame.period === 'static' ? 1 : .72 + day * .22);
     sky.current.position.copy(camera.position); sky.current.scale.setScalar(radius * 12);
-    const distance = camera.position.distanceTo(new THREE.Vector3(center[0], 0, center[1]));
+    const distance = camera.position.distanceTo(objects.center.set(center[0], 0, center[1]));
     const fog = scene.fog as THREE.Fog;
     if (fog) { fog.color.copy(objects.background); fog.near = THREE.MathUtils.lerp(distance + radius * 2, Math.max(1, distance - radius * 1.5), rain * .35); fog.far = distance + radius * 6; }
     ambient.current.intensity = .3 + day * .5;
@@ -60,10 +67,11 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
     const time = reduced ? 0 : performance.now() / 1000;
     for (let i = 0; i < 12; i++) {
       objects.dummy.position.set(center[0] + Math.sin(i * 2.4 + time * .006) * radius * 1.3, 10 + radius * .45 + i % 3, center[1] + Math.cos(i * 2.4 + time * .006) * radius);
-      objects.dummy.scale.set(radius * .35, .15 + radius * .035, radius * .2); objects.dummy.updateMatrix(); cloud.current.setMatrixAt(i, objects.dummy.matrix);
+      objects.dummy.quaternion.copy(camera.quaternion);
+      objects.dummy.scale.set(radius * .4, radius * .12, 1); objects.dummy.updateMatrix(); cloud.current.setMatrixAt(i, objects.dummy.matrix);
     }
     cloud.current.instanceMatrix.needsUpdate = true;
-    (cloud.current.material as THREE.MeshBasicMaterial).opacity = clouds * (.1 + day * .08);
+    cloudUniforms.opacity.value = clouds * (.22 + day * .12);
     cloud.current.visible = frame.enabled && clouds > .01;
   });
   return <>
@@ -80,7 +88,7 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
       <pointsMaterial size={1.5} sizeAttenuation={false} color="#dce7f5" transparent depthWrite={false} fog={false} />
     </points>
     <instancedMesh ref={cloud} args={[undefined, undefined, 12]} raycast={() => {}} frustumCulled={false}>
-      <sphereGeometry args={[1, 12, 6]} /><meshBasicMaterial color="#abb8b5" transparent depthWrite={false} />
+      <planeGeometry args={[2, 2]} /><shaderMaterial transparent depthWrite={false} uniforms={cloudUniforms} vertexShader={'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.0); }'} fragmentShader={'uniform float opacity; uniform vec3 cloudColor; varying vec2 vUv; void main(){ float fade=pow(max(0.0,1.0-length((vUv-0.5)*2.0)),2.0); gl_FragColor=vec4(cloudColor,fade*opacity);\n#include <colorspace_fragment>\n}'} />
     </instancedMesh>
     {frame.period !== 'static' && <CelestialBodies solarAngle={frame.solarAngle} daylight={frame.daylight} radius={radius} reduced={reduced} />}
   </>;

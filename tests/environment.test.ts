@@ -52,6 +52,12 @@ test('rain requires fresh observation, allowed code and amount; snow is distinct
   assert.equal(snow.rainIntensity, 0);
   assert.equal(snow.snow, true);
 });
+test('partial polar events without a bracketing pair use fresh daylight observations', () => {
+  const now = Date.parse('2026-06-01T23:00:00Z');
+  const polar = { ...weather, fetchedAt: now, observedAt: now, timeZone: 'UTC', sunrise: [now - 86400000], sunset: [], isDay: true };
+  assert.equal(resolveEnvironment(now, 'UTC', prefs, polar).period, 'day');
+  assert.equal(resolveEnvironment(now, 'UTC', prefs, { ...polar, isDay: false }).period, 'night');
+});
 test('invalid saved preferences fail closed to fresh defaults', () => {
   for (const bad of [{ ...prefs, enabled: 'yes' }, { ...prefs, location: { ...location, latitude: 999 } }, { ...prefs, location: { ...location, timeZone: 'invalid' } }]) {
     assert.deepEqual(readEnvironmentPreferences(JSON.stringify(bad)), defaults);

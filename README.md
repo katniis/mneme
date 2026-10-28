@@ -40,6 +40,10 @@ No environment variables, credentials, API routes, accounts, or backend are requ
 
 ## Your data
 
+Environment settings can follow your real local day and night independently of demo growth time. Seasonal island colours and local rain use an optional location or selected city; there is a master switch and a switch for each effect. Weather is approximate, model-derived Open-Meteo data. No location prompt or weather request occurs before setup. Choosing a location sends approximate coordinates to Open-Meteo; city searches send the city name. Letters are never included.
+
+`mneme-environment-v1` stores these preferences and the chosen approximate location; `mneme-weather-v1` stores weather cache data. Clear location removes that cache. Turning effects off retains the individual preferences. Preparing supplied sun/moon derivatives is an offline `npm run assets:celestials` step; ordinary builds use the checked-in small `.sky.glb` files.
+
 Only browser local storage is used. `mneme-garden-v1` stores the letters, seeds, positions, and simulation state; `mneme-draft-v1` stores the draft. Rendering caches and GPU geometry stay in memory.
 
 This is a **local prototype**. Content is not encrypted. The reveal date is a demonstration, not a secure lock. Clearing browser data deletes the garden. There is no cloud sync or backup. The simulation pauses when the document is hidden and does not catch up to real-world time after reopening.
