@@ -38,12 +38,14 @@ export function useEnvironment() {
   }, []);
   const updatePrefs = useCallback((changes: Partial<EnvironmentPreferences>) => {
     const next = { ...prefs, ...changes };
+    const currentZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     requests.current.gps++;
-    if (!requiresWeather(next, zone)) invalidate();
+    if (!requiresWeather(next, currentZone)) invalidate();
+    setNow(Date.now()); setZone(currentZone);
     setLocationStatus('');
-    setWeatherStatus('');
+    if (!requiresWeather(next, currentZone) || !requests.current.controller) setWeatherStatus('');
     setPrefs(next);
-  }, [prefs, zone, invalidate]);
+  }, [prefs, invalidate]);
   useEffect(() => {
     if (!ready) return;
     try { localStorage.setItem(ENVIRONMENT_KEY, JSON.stringify(prefs)); setStorageStatus(''); }
@@ -62,22 +64,28 @@ export function useEnvironment() {
   useEffect(() => {
     if (!ready || !visible || !weatherNeeded || !location) return;
     const generation = ++requests.current.generation;
-    const controller = new AbortController();
-    requests.current.controller = controller;
-    const key = locationKey(location), previous = attempts.current.get(key), time = Date.now();
-    if (previous && time - previous.at < (previous.success ? 900000 : 60000)) return () => controller.abort();
-    attempts.current.set(key, { at: time, success: false, weather: previous?.weather ?? null });
-    setWeatherStatus('Updating weather…');
-    fetchWeather(location, controller.signal).then(w => {
-      if (controller.signal.aborted || generation !== requests.current.generation) return;
-      attempts.current.set(key, { at: Date.now(), success: true, weather: w });
-      setWeather(w); setNow(Date.now()); setWeatherStatus('');
-      try { localStorage.setItem(WEATHER_KEY, JSON.stringify({ location: JSON.parse(key), weather: w })); } catch { setStorageStatus('Weather is available, but its cache cannot be saved.'); }
-    }).catch(() => {
-      if (!controller.signal.aborted && generation === requests.current.generation) setWeatherStatus('Weather unavailable. Local time still works; retry in a minute.');
-    });
-    return () => { controller.abort(); };
-  }, [ready, visible, weatherNeeded, now, refresh, location]);
+    let controller: AbortController | null = null;
+    const key = locationKey(location);
+    const check = () => {
+      if (document.hidden || controller || generation !== requests.current.generation) return;
+      const previous = attempts.current.get(key), time = Date.now();
+      if (previous && time - previous.at < (previous.success ? 900000 : 60000)) return;
+      const pending = new AbortController(); controller = pending; requests.current.controller = pending;
+      attempts.current.set(key, { at: time, success: false, weather: previous?.weather ?? null });
+      setWeatherStatus('Updating weather…');
+      fetchWeather(location, pending.signal).then(w => {
+        if (pending.signal.aborted || generation !== requests.current.generation) return;
+        attempts.current.set(key, { at: Date.now(), success: true, weather: w });
+        setWeather(w); setNow(Date.now()); setWeatherStatus('');
+        try { localStorage.setItem(WEATHER_KEY, JSON.stringify({ location: JSON.parse(key), weather: w })); } catch { setStorageStatus('Weather is available, but its cache cannot be saved.'); }
+      }).catch(() => {
+        if (!pending.signal.aborted && generation === requests.current.generation) setWeatherStatus('Weather unavailable. Local time still works; retry in a minute.');
+      }).finally(() => { if (controller === pending) controller = null; if (requests.current.controller === pending) requests.current.controller = null; });
+    };
+    check();
+    const timer = window.setInterval(check, 30000);
+    return () => { clearInterval(timer); controller?.abort(); };
+  }, [ready, visible, weatherNeeded, refresh, location]);
   const chooseLocation = useCallback((next: EnvironmentLocation) => {
     const key = locationKey(next), cached = attempts.current.get(key)?.weather ?? null;
     invalidate(); setWeather(cached); setWeatherStatus(''); setLocationStatus('');
@@ -94,7 +102,7 @@ export function useEnvironment() {
     setPrefs(p => ({ ...p, location: null }));
   }, [invalidate]);
   const useMyLocation = useCallback(() => {
-    invalidate();
+    requests.current.gps++;
     const token = requests.current.gps;
     if (!navigator.geolocation) { setLocationStatus('Location is unavailable. You can choose a city below.'); return; }
     setLocationStatus('Finding your approximate location…');
@@ -103,9 +111,9 @@ export function useEnvironment() {
       const currentZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       chooseLocation({ name: 'Your approximate location', latitude: Math.round(position.coords.latitude * 100) / 100, longitude: Math.round(position.coords.longitude * 100) / 100, timeZone: currentZone, source: 'device', deviceZoneAtSelection: currentZone });
     }, () => { if (token === requests.current.gps) setLocationStatus('Location was not available or permission was declined. You can choose a city below.'); }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
-  }, [chooseLocation, invalidate]);
+  }, [chooseLocation]);
   useEffect(() => () => invalidate(), [invalidate]);
   const frame = useMemo(() => resolveEnvironment(now, zone, prefs, weather), [now, zone, prefs, weather]);
-  return { prefs, frame, zone, locationStatus, weatherStatus, storageStatus, weather, weatherNeeded, locationActive: !!location, updatePrefs, chooseLocation, clearLocation, useMyLocation, refreshWeather: () => { setNow(Date.now()); setRefresh(n => n + 1); } };
+  return { prefs, frame, zone, locationStatus, weatherStatus, storageStatus, weather, weatherNeeded, locationActive: !!location, updatePrefs, chooseLocation, clearLocation, useMyLocation, refreshWeather: () => { setNow(Date.now()); if (!requests.current.controller) setRefresh(n => n + 1); } };
 }
 export type EnvironmentController = ReturnType<typeof useEnvironment>;

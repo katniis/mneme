@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { EnvironmentFrame } from '../../lib/environment';
-import CelestialBodies from './CelestialBodies';
+import { fitShadowBounds } from '../../lib/atmosphere';
+import type { Vec3 } from '../../lib/tree';
 import useReducedMotion from './useReducedMotion';
 
-export default function EnvironmentSky({ frame, center, radius }: { frame: EnvironmentFrame; center: [number, number]; radius: number }) {
+export default function EnvironmentSky({ frame, center, radius, treeTop }: { frame: EnvironmentFrame; center: [number, number]; radius: number; treeTop: number }) {
   const reduced = useReducedMotion();
   const { scene } = useThree();
   const sky = useRef<THREE.Mesh>(null!), stars = useRef<THREE.Points>(null!);
   const ambient = useRef<THREE.AmbientLight>(null!), hemi = useRef<THREE.HemisphereLight>(null!), sun = useRef<THREE.DirectionalLight>(null!), fill = useRef<THREE.DirectionalLight>(null!);
-  const cloud = useRef<THREE.InstancedMesh>(null!);
-  const current = useRef({ daylight: frame.daylight, clouds: frame.cloudCover, rain: frame.rainIntensity });
+  const shadowSignature = useRef('');
+  const current = useRef({ daylight: frame.daylight, clouds: frame.cloudCover, rain: frame.rainIntensity, angle: frame.solarAngle });
   const objects = useMemo(() => {
     const starPositions = new Float32Array(Array.from({ length: 512 * 3 }, (_, i) => {
       const r = Math.sin((i + 13) * 127.1) * 43758.5453;
@@ -21,10 +22,9 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
       const length = Math.hypot(starPositions[i], starPositions[i + 1], starPositions[i + 2]);
       for (let j = 0; j < 3; j++) starPositions[i + j] /= length;
     }
-    return { background: new THREE.Color(), day: new THREE.Color('#e9eee5'), night: new THREE.Color('#101b2e'), overcast: new THREE.Color('#8c9a9b'), dusk: new THREE.Color('#d1aaa0'), dummy: new THREE.Object3D(), center: new THREE.Vector3(), starPositions };
+    return { background: new THREE.Color(), day: new THREE.Color('#e9eee5'), night: new THREE.Color('#101b2e'), overcast: new THREE.Color('#8c9a9b'), dusk: new THREE.Color('#d1aaa0'), center: new THREE.Vector3(), direction: new THREE.Vector3(), starPositions };
   }, []);
   const uniforms = useMemo(() => ({ top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() } }), []);
-  const cloudUniforms = useMemo(() => ({ opacity: { value: 0 }, cloudColor: { value: new THREE.Color('#abb8b5') } }), []);
   useEffect(() => {
     const background = new THREE.Color(), fog = new THREE.Fog('#e9eee5', 80, 190);
     const oldBackground = scene.background, oldFog = scene.fog;
@@ -34,16 +34,17 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
   useEffect(() => {
     sun.current.target.position.set(center[0], 0, center[1]);
     sun.current.target.updateMatrixWorld();
-    const camera = sun.current.shadow.camera;
-    camera.left = camera.bottom = -(radius + 6); camera.right = camera.top = radius + 6;
-    camera.far = Math.max(200, radius * 16); camera.updateProjectionMatrix();
-  }, [center, radius]);
+  }, [center]);
   useFrame(({ camera }, delta) => {
     if (document.hidden) return;
     const dt = Math.min(delta, .1), lightStep = reduced || !frame.enabled ? 1 : 1 - Math.exp(-dt * 2), weatherStep = reduced || !frame.enabled ? 1 : 1 - Math.exp(-dt * 1.2);
     current.current.daylight += (frame.daylight - current.current.daylight) * lightStep;
     current.current.clouds += (frame.cloudCover - current.current.clouds) * weatherStep;
     current.current.rain += (frame.rainIntensity - current.current.rain) * weatherStep;
+    let angleDifference = frame.solarAngle - current.current.angle;
+    if (angleDifference > Math.PI) angleDifference -= Math.PI * 2;
+    if (angleDifference < -Math.PI) angleDifference += Math.PI * 2;
+    current.current.angle += angleDifference * lightStep;
     const { daylight: day, clouds, rain } = current.current;
     objects.background.copy(objects.night).lerp(objects.day, day);
     if (frame.period === 'dawn' || frame.period === 'dusk') objects.background.lerp(objects.dusk, .22 * (1 - Math.abs(day - .5) * 2));
@@ -51,28 +52,31 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
     (scene.background as THREE.Color)?.copy(objects.background);
     uniforms.horizon.value.copy(objects.background);
     uniforms.top.value.copy(objects.background).multiplyScalar(frame.period === 'static' ? 1 : .72 + day * .22);
-    sky.current.position.copy(camera.position); sky.current.scale.setScalar(radius * 12);
     const distance = camera.position.distanceTo(objects.center.set(center[0], 0, center[1]));
+    const skyDistance = Math.min((camera as THREE.PerspectiveCamera).far * .8, Math.max(radius * 10, distance + radius * 8));
+    sky.current.position.copy(camera.position); sky.current.scale.setScalar(skyDistance * 1.05);
     const fog = scene.fog as THREE.Fog;
     if (fog) { fog.color.copy(objects.background); fog.near = THREE.MathUtils.lerp(distance + radius * 2, Math.max(1, distance - radius * 1.5), rain * .35); fog.far = distance + radius * 6; }
     ambient.current.intensity = .3 + day * .5;
     hemi.current.intensity = .6 + day;
     sun.current.intensity = (.12 + day * 2.38) * (1 - clouds * .55);
-    sun.current.color.set(day < .7 ? '#c8d8f5' : '#fff1cf');
-    if (frame.period === 'static') sun.current.position.set(-8, 14, 5);
-    else sun.current.position.set(center[0] - Math.cos(frame.solarAngle) * radius * 2, radius * (1.5 + Math.abs(Math.sin(frame.solarAngle))), center[1] + radius);
-    fill.current.intensity = .3 + day * .35;
-    stars.current.position.copy(camera.position); stars.current.quaternion.copy(camera.quaternion); stars.current.scale.setScalar(radius * 10);
-    (stars.current.material as THREE.PointsMaterial).opacity = frame.period === 'static' ? 0 : (1 - day) * (1 - clouds) * .7;
-    const time = reduced ? 0 : performance.now() / 1000;
-    for (let i = 0; i < 12; i++) {
-      objects.dummy.position.set(center[0] + Math.sin(i * 2.4 + time * .006) * radius * 1.3, 10 + radius * .45 + i % 3, center[1] + Math.cos(i * 2.4 + time * .006) * radius);
-      objects.dummy.quaternion.copy(camera.quaternion);
-      objects.dummy.scale.set(radius * .4, radius * .12, 1); objects.dummy.updateMatrix(); cloud.current.setMatrixAt(i, objects.dummy.matrix);
+    sun.current.color.set(frame.period === 'dawn' || frame.period === 'dusk' ? '#ffd0a0' : day < .7 ? '#c8d8f5' : '#fff1cf');
+    const span = radius + 6;
+    const lightDistance = Math.max(40, Math.hypot(span, treeTop + 8) * 3);
+    if (frame.period === 'static') objects.direction.set(-8, 14, 5).normalize();
+    else objects.direction.set(-Math.cos(current.current.angle) * 2, 1.5 + Math.abs(Math.sin(current.current.angle)), 1).normalize();
+    sun.current.position.copy(objects.center).addScaledVector(objects.direction, lightDistance);
+    const signature = [center[0], center[1], radius, treeTop, Math.round(current.current.angle * 1000), frame.period === 'static'].join(':');
+    if (signature !== shadowSignature.current) {
+      sun.current.updateMatrixWorld(); sun.current.shadow.updateMatrices(sun.current);
+      const corners: Vec3[] = [];
+      for (const x of [center[0] - span, center[0] + span]) for (const y of [-Math.max(16, radius * .8), treeTop + 2]) for (const z of [center[1] - span, center[1] + span]) corners.push([x, y, z]);
+      Object.assign(sun.current.shadow.camera, fitShadowBounds(corners, sun.current.shadow.camera.matrixWorldInverse.elements));
+      sun.current.shadow.camera.updateProjectionMatrix(); shadowSignature.current = signature;
     }
-    cloud.current.instanceMatrix.needsUpdate = true;
-    cloudUniforms.opacity.value = clouds * (.22 + day * .12);
-    cloud.current.visible = frame.enabled && clouds > .01;
+    fill.current.intensity = .3 + day * .35;
+    stars.current.position.copy(camera.position); stars.current.quaternion.copy(camera.quaternion); stars.current.scale.setScalar(skyDistance);
+    (stars.current.material as THREE.PointsMaterial).opacity = frame.period === 'static' ? 0 : (1 - day) * (1 - clouds) * .7;
   });
   return <>
     <mesh ref={sky} raycast={() => {}} renderOrder={-100}>
@@ -87,10 +91,6 @@ export default function EnvironmentSky({ frame, center, radius }: { frame: Envir
       <bufferGeometry><bufferAttribute attach="attributes-position" args={[objects.starPositions, 3]} /></bufferGeometry>
       <pointsMaterial size={1.5} sizeAttenuation={false} color="#dce7f5" transparent depthWrite={false} fog={false} />
     </points>
-    <instancedMesh ref={cloud} args={[undefined, undefined, 12]} raycast={() => {}} frustumCulled={false}>
-      <planeGeometry args={[2, 2]} /><shaderMaterial transparent depthWrite={false} uniforms={cloudUniforms} vertexShader={'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.0); }'} fragmentShader={'uniform float opacity; uniform vec3 cloudColor; varying vec2 vUv; void main(){ float fade=pow(max(0.0,1.0-length((vUv-0.5)*2.0)),2.0); gl_FragColor=vec4(cloudColor,fade*opacity);\n#include <colorspace_fragment>\n}'} />
-    </instancedMesh>
-    {frame.period !== 'static' && <CelestialBodies solarAngle={frame.solarAngle} daylight={frame.daylight} radius={radius} reduced={reduced} />}
   </>;
 }
 

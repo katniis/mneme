@@ -118,12 +118,3 @@ export function terrainColour(color: string, kind: string, season: Season): stri
   return `#${channel(16)}${channel(8)}${channel(0)}`;
 }
 export const RAIN_LIMITS = { desktop: { drops: 1200, splashes: 120 }, mobile: { drops: 450, splashes: 40 } } as const;
-export function rainSample(index: number, elapsedSeconds: number, ground: { x: number; y: number; z: number }[]) {
-  if (!ground.length) return null;
-  const hash = (n: number) => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
-  const time = Math.max(0, elapsedSeconds) + (hash(index + 71) % 1500) / 1000;
-  const cycle = Math.floor(time / 1.5), phase = time - cycle * 1.5;
-  const column = ground[hash(index + cycle * 1201) % ground.length];
-  const impact = phase >= 1.4;
-  return { x: column.x, y: column.y + (impact ? 0 : 12 * (1 - phase / 1.4)), z: column.z, impact, cycle };
-}

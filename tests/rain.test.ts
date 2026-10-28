@@ -1,26 +1,60 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rainSample, RAIN_LIMITS, terrainColour } from '../lib/environment.ts';
-import { generateTerrain, placement, type Position } from '../lib/terrain.ts';
-test('rain is deterministic, selects real grass columns and never descends below their top', () => {
+import { makeRainField, rainSpawn, rainPosition, rainStreakSize } from '../lib/atmosphere.ts';
+import { RAIN_LIMITS, terrainColour } from '../lib/environment.ts';
+import { CELL, generateTerrain, placement, type Position } from '../lib/terrain.ts';
+
+test('rain covers surrounding void and only impacts actual grass cells', () => {
+  const field = makeRainField([0, 0], 4, 8, { position: [0, 12, 20], target: [0, 0, 0], aspect: 1 });
+  const ground = new Map([['0:0', { x: 0, y: .4, z: 0 }]]);
+  let land = 0, voids = 0;
+  for (let i = 0; i < 10000; i++) {
+    const spawn = rainSpawn(i, 0, field, ground);
+    assert.deepEqual(spawn, rainSpawn(i, 0, field, ground));
+    assert.ok(Math.abs(spawn.x) <= field.halfWidth && Math.abs(spawn.z) <= field.halfDepth);
+    if (spawn.impactY !== null) { land++; assert.equal(spawn.impactY, .4); assert.ok(Math.abs(spawn.x) <= CELL / 2); }
+    else voids++;
+  }
+  assert.ok(land > 0 && voids > land);
+  const empty = rainSpawn(3, 0, field, new Map());
+  assert.equal(empty.impactY, null);
+  assert.ok(Math.abs(rainPosition(empty, (empty.top + 2) / 12).y + 2) < 1e-10);
+  assert.equal(rainPosition(empty, 100).impact, false);
+});
+test('rain stops on land, falls below void and finishes without duplicate impacts', () => {
+  const spawn = { x: 0, z: 0, top: 12, bottom: -16, impactY: 0 };
+  assert.equal(rainPosition(spawn, -.5).y, 12);
+  assert.equal(rainPosition(spawn, .5).y, 6);
+  assert.deepEqual(rainPosition(spawn, 1), { x: 0, y: 0, z: 0, impact: true, finished: false });
+  assert.equal(rainPosition(spawn, 1.11).finished, true);
+  assert.equal(rainPosition(spawn, 1.11).impact, false);
+  assert.equal(rainPosition({ ...spawn, impactY: null }, 1.5).y, -6);
+  assert.equal(rainPosition({ ...spawn, impactY: null }, 3).finished, true);
+});
+test('field bounds and degenerate camera directions are finite and existing spawns stay latched', () => {
+  const first = makeRainField([0, 0], 4, 8, { position: [0, 20, 0], target: [0, 0, 0], aspect: 1 });
+  assert.deepEqual(first.forward, [0, 1]); assert.deepEqual(first.right, [1, 0]);
+  assert.equal(first.halfDepth, 13); assert.equal(first.top, 32); assert.equal(first.bottom, -16);
+  const spawn = rainSpawn(7, 1, first, new Map()), before = JSON.stringify(spawn);
+  const second = makeRainField([50, 20], 30, 14, { position: [80, 80, 100], target: [50, 0, 20], aspect: 2 });
+  assert.ok(second.halfDepth >= 54); assert.ok(second.halfWidth >= 108);
+  assert.ok(Math.abs(second.forward[0] * second.right[0] + second.forward[1] * second.right[1]) < 1e-12);
+  rainPosition(spawn, 1); assert.equal(JSON.stringify(spawn), before);
+  assert.notDeepEqual(rainSpawn(7, 2, second, new Map()), spawn);
+});
+test('distant and near-camera rain stays readable without huge streaks', () => {
+  assert.ok(rainStreakSize(200).width >= .1 && rainStreakSize(200).length >= .7);
+  assert.ok(rainStreakSize(2).length < .03);
+  assert.ok(rainStreakSize(1000).length <= 1.5 && rainStreakSize(1000).width <= .16);
+  const high = makeRainField([0, 0], 32, 12, { position: [100, 100, 100], target: [0, 0, 0], aspect: .5 });
+  assert.ok(high.top > 200 && high.bottom < -50);
+});
+test('atmospheric effects never mutate retained 49-plot ground and keep pool ceilings', () => {
   const plots: Position[] = [[0, 0]];
   while (plots.length < 49) plots.push(placement(plots));
-  const terrain = generateTerrain(plots);
-  const before = JSON.stringify(terrain);
-  const ground = terrain.filter(v => v.kind === 'grass').map(v => ({ x: v.position[0], y: v.position[1] + v.size[1] / 2, z: v.position[2] }));
-  let impacts = 0;
-  for (let i = 0; i < 2000; i++) {
-    const s = rainSample(i % 1200, i / 70, ground)!;
-    assert.deepEqual(s, rainSample(i % 1200, i / 70, ground));
-    const column = ground.find(g => g.x === s.x && g.z === s.z)!;
-    assert.ok(column); assert.ok(Number.isFinite(s.y)); assert.ok(s.y >= column.y && s.y <= column.y + 12);
-    if (s.impact) { assert.equal(s.y, column.y); impacts++; }
-  }
-  assert.ok(impacts > 0);
+  const terrain = generateTerrain(plots), before = JSON.stringify(terrain);
   for (const season of ['neutral', 'spring', 'summer', 'autumn', 'winter', 'tropical'] as const) terrain.forEach(v => terrainColour(v.color, v.kind, season));
   assert.equal(JSON.stringify(terrain), before);
-});
-test('empty rain is safe and particle pools are bounded for both device classes', () => {
-  assert.equal(rainSample(0, 100, []), null);
-  assert.deepEqual(RAIN_LIMITS, { desktop: { drops: 1200, splashes: 120 }, mobile: { drops: 450, splashes: 40 } });
+  assert.ok(RAIN_LIMITS.desktop.drops <= 1200 && RAIN_LIMITS.mobile.drops <= 450);
+  assert.ok(RAIN_LIMITS.desktop.splashes <= 120 && RAIN_LIMITS.mobile.splashes <= 40);
 });

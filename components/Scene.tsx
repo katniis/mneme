@@ -317,9 +317,9 @@ function World(props: Props) {
 	}, [gl, props.removal, props.onRemovalComplete]);
 	return (
 		<>
-      <EnvironmentSky frame={props.environment} {...extent} />
+      <EnvironmentSky frame={props.environment} treeTop={height} {...extent} />
       <Terrain positions={positions} data={ground} environment={props.environment} />
-      <Rain ground={ground} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
+      <Rain {...extent} treeTop={height} ground={ground} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
 			{trees.map(({ letter, data }) => (
 				<Tree
 					key={letter.id}
