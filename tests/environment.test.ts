@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_ENVIRONMENT as defaults, localDateParts, readEnvironmentPreferences, resolveEnvironment, seasonFor, terrainColour, type WeatherSnapshot } from '../lib/environment.ts';
+import { DEFAULT_ENVIRONMENT as defaults, localDateParts, readEnvironmentPreferences, resolveEnvironment, requiresWeather, seasonFor, terrainColour, type WeatherSnapshot } from '../lib/environment.ts';
 
 const noon = Date.parse('2026-10-28T04:00:00Z');
 const location = { name: 'Manila', latitude: 14.6, longitude: 120.98, timeZone: 'Asia/Manila', source: 'city' as const, deviceZoneAtSelection: 'Asia/Manila' };
@@ -68,4 +68,50 @@ test('seasonal colours preserve original neutral and stone colours without mutat
   assert.equal(terrainColour('#668844', 'grass', 'neutral'), '#668844');
   assert.equal(terrainColour('#668844', 'stone', 'winter'), '#668844');
   assert.notEqual(terrainColour('#668844', 'grass', 'autumn'), '#668844');
+});
+test('manual phases override local time and fresh provider daylight', () => {
+  for (const [timeMode, period, angle, daylight] of [
+    ['night', 'night', Math.PI * 1.5, 0], ['day', 'day', Math.PI / 2, 1],
+    ['dawn', 'dawn', 0, .5], ['dusk', 'dusk', Math.PI, .5],
+  ] as const) {
+    const frame = resolveEnvironment(noon, 'Asia/Manila', { ...prefs, timeMode }, weather);
+    assert.equal(frame.period, period); assert.equal(frame.solarAngle, angle); assert.equal(frame.daylight, daylight);
+  }
+  assert.equal(resolveEnvironment(noon + 43200000, 'Asia/Manila', { ...defaults, timeMode: 'day' }, null).period, 'day');
+  assert.equal(resolveEnvironment(noon + 43200000, 'Asia/Manila', { ...defaults, timeMode: 'local' }, null).period, 'night');
+});
+test('manual weather and season are independent and need no location', () => {
+  const p = { ...defaults, timeMode: 'night' as const, seasonMode: 'tropical' as const, weatherMode: 'snow' as const };
+  const frame = resolveEnvironment(noon, 'Asia/Manila', p, null);
+  assert.equal(frame.season, 'tropical'); assert.equal(frame.snow, true); assert.equal(frame.rainIntensity, 0); assert.equal(frame.source, 'manual');
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, seasons: false }, null).snow, true);
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, rain: false }, null).snow, false);
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, weatherMode: 'clear', seasonMode: 'winter' }, null).snow, false);
+  for (const [weatherMode, clouds, rain] of [['clear', 0, 0], ['cloudy', .7, 0], ['light-rain', .85, .35], ['heavy-rain', 1, 1]] as const) {
+    const f = resolveEnvironment(noon, 'Asia/Manila', { ...p, weatherMode }, null);
+    assert.equal(f.cloudCover, clouds); assert.equal(f.rainIntensity, rain);
+  }
+  const off = resolveEnvironment(noon, 'Asia/Manila', { ...p, enabled: false }, null);
+  assert.equal(off.period, 'static'); assert.equal(off.season, 'neutral'); assert.equal(off.snow, false); assert.equal(off.cloudCover, 0);
+});
+test('v1 preferences migrate without losing choices and unknown mode fields fall back independently', () => {
+  const legacy = { version: 1, enabled: true, dayNight: false, seasons: true, rain: false, location };
+  const migrated = readEnvironmentPreferences(JSON.stringify(legacy));
+  assert.equal(migrated.version, 2); assert.equal(migrated.dayNight, false); assert.equal(migrated.rain, false);
+  assert.deepEqual(migrated.location, location); assert.equal(migrated.timeMode, 'local'); assert.equal(migrated.weatherMode, 'local');
+  const raw = JSON.stringify({ ...migrated, timeMode: 'broken', seasonMode: 'winter', weatherMode: 'snow' });
+  const p = readEnvironmentPreferences(raw); assert.equal(p.timeMode, 'local'); assert.equal(p.seasonMode, 'winter'); assert.equal(p.weatherMode, 'snow');
+  assert.deepEqual(readEnvironmentPreferences(JSON.stringify(p)), p);
+});
+test('weather demand follows active local consumers, with no requests for calendar alone', () => {
+  const manual = { ...prefs, timeMode: 'night' as const, seasonMode: 'winter' as const, weatherMode: 'clear' as const };
+  assert.equal(requiresWeather(manual, 'Asia/Manila'), false);
+  assert.equal(requiresWeather({ ...manual, weatherMode: 'local' }, 'Asia/Manila'), true);
+  assert.equal(requiresWeather({ ...manual, timeMode: 'local' }, 'Asia/Manila'), true);
+  assert.equal(requiresWeather({ ...manual, timeMode: 'local' }, 'UTC'), false);
+  assert.equal(requiresWeather({ ...manual, seasonMode: 'local' }, 'Asia/Manila'), false);
+  assert.equal(requiresWeather({ ...prefs, enabled: false }, 'Asia/Manila'), false);
+  assert.equal(requiresWeather({ ...prefs, dayNight: false, seasons: false, rain: false }, 'Asia/Manila'), false);
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', manual, weather).weatherStatus, 'off');
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...manual, timeMode: 'local' }, weather).source, 'mixed');
 });

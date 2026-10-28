@@ -1,9 +1,15 @@
 export type EnvironmentLocation = { name: string; latitude: number; longitude: number; timeZone: string; source: 'device' | 'city'; deviceZoneAtSelection: string };
-export type EnvironmentPreferences = { version: 1; enabled: boolean; dayNight: boolean; seasons: boolean; rain: boolean; location: EnvironmentLocation | null };
 export type Season = 'neutral' | 'tropical' | 'spring' | 'summer' | 'autumn' | 'winter';
+export type TimeMode = 'local' | 'dawn' | 'day' | 'dusk' | 'night';
+export type SeasonMode = 'local' | Season;
+export type WeatherMode = 'local' | 'clear' | 'cloudy' | 'light-rain' | 'heavy-rain' | 'snow';
+export type EnvironmentPreferences = { version: 2; enabled: boolean; dayNight: boolean; seasons: boolean; rain: boolean; location: EnvironmentLocation | null; timeMode: TimeMode; seasonMode: SeasonMode; weatherMode: WeatherMode };
 export type WeatherSnapshot = { fetchedAt: number; observedAt: number; timeZone: string; rainMm: number; code: number; cloudCover: number; temperatureC: number; isDay: boolean; sunrise: number[]; sunset: number[] };
-export type EnvironmentFrame = { enabled: boolean; period: 'static' | 'dawn' | 'day' | 'dusk' | 'night'; solarAngle: number; daylight: number; season: Season; rainIntensity: number; cloudCover: number; snow: boolean; source: 'static' | 'local-clock' | 'local-weather'; weatherStatus: 'off' | 'needs-location' | 'fresh' | 'stale' | 'unavailable' };
-export const DEFAULT_ENVIRONMENT: EnvironmentPreferences = { version: 1, enabled: true, dayNight: true, seasons: true, rain: true, location: null };
+export type EnvironmentFrame = { enabled: boolean; period: 'static' | 'dawn' | 'day' | 'dusk' | 'night'; solarAngle: number; daylight: number; season: Season; rainIntensity: number; cloudCover: number; snow: boolean; source: 'static' | 'local-clock' | 'local-weather' | 'manual' | 'mixed'; weatherStatus: 'off' | 'needs-location' | 'fresh' | 'stale' | 'unavailable' };
+export const TIME_MODES: TimeMode[] = ['local', 'dawn', 'day', 'dusk', 'night'];
+export const SEASON_MODES: SeasonMode[] = ['local', 'neutral', 'spring', 'summer', 'autumn', 'winter', 'tropical'];
+export const WEATHER_MODES: WeatherMode[] = ['local', 'clear', 'cloudy', 'light-rain', 'heavy-rain', 'snow'];
+export const DEFAULT_ENVIRONMENT: EnvironmentPreferences = { version: 2, enabled: true, dayNight: true, seasons: true, rain: true, location: null, timeMode: 'local', seasonMode: 'local', weatherMode: 'local' };
 export const ENVIRONMENT_KEY = 'mneme-environment-v1';
 export const WEATHER_KEY = 'mneme-weather-v1';
 const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 97, 99]);
@@ -23,8 +29,11 @@ export function validLocation(value: unknown): value is EnvironmentLocation {
 export function readEnvironmentPreferences(raw: string | null): EnvironmentPreferences {
   try {
     const v = JSON.parse(raw || 'null');
-    if (v?.version === 1 && ['enabled', 'dayNight', 'seasons', 'rain'].every(k => typeof v[k] === 'boolean') && (v.location === null || validLocation(v.location))) {
-      return { version: 1, enabled: v.enabled, dayNight: v.dayNight, seasons: v.seasons, rain: v.rain, location: v.location };
+    if ([1, 2].includes(v?.version) && ['enabled', 'dayNight', 'seasons', 'rain'].every(k => typeof v[k] === 'boolean') && (v.location === null || validLocation(v.location))) {
+      return { version: 2, enabled: v.enabled, dayNight: v.dayNight, seasons: v.seasons, rain: v.rain, location: v.location,
+        timeMode: v.version === 2 && TIME_MODES.includes(v.timeMode) ? v.timeMode : 'local',
+        seasonMode: v.version === 2 && SEASON_MODES.includes(v.seasonMode) ? v.seasonMode : 'local',
+        weatherMode: v.version === 2 && WEATHER_MODES.includes(v.weatherMode) ? v.weatherMode : 'local' };
     }
   } catch { /* Invalid preferences never affect saved letters. */ }
   return { ...DEFAULT_ENVIRONMENT };
@@ -45,6 +54,10 @@ export function freshWeather(w: WeatherSnapshot | null, now: number): w is Weath
 }
 export function activeLocation(p: EnvironmentPreferences, zone: string) {
   return p.location && (p.location.source === 'city' || p.location.deviceZoneAtSelection === zone) ? p.location : null;
+}
+export function requiresWeather(p: EnvironmentPreferences, zone: string): boolean {
+  return p.enabled && (p.dayNight || p.seasons || p.rain) &&
+    (p.weatherMode === 'local' || (p.dayNight && p.timeMode === 'local' && activeLocation(p, zone)?.timeZone === zone));
 }
 export function resolveEnvironment(now: number, deviceZone: string, p: EnvironmentPreferences, weather: WeatherSnapshot | null): EnvironmentFrame {
   const location = activeLocation(p, deviceZone);
@@ -69,16 +82,30 @@ export function resolveEnvironment(now: number, deviceZone: string, p: Environme
     }
   }
   const daytime = Math.sin(angle) >= 0;
-  const period = distance <= 30 ? (Math.cos(angle) >= 0 ? 'dawn' : 'dusk') : daytime ? 'day' : 'night';
+  let period: EnvironmentFrame['period'] = distance <= 30 ? (Math.cos(angle) >= 0 ? 'dawn' : 'dusk') : daytime ? 'day' : 'night';
+  if (p.timeMode !== 'local') {
+    period = p.timeMode;
+    angle = { dawn: 0, day: Math.PI / 2, dusk: Math.PI, night: Math.PI * 1.5 }[p.timeMode];
+    daylight = p.timeMode === 'night' ? 0 : p.timeMode === 'day' ? 1 : .5;
+  }
+  let clouds = fresh ? weather.cloudCover : 0;
+  let rain = fresh && RAIN_CODES.has(weather.code) ? clamp(weather.rainMm / 3) : 0;
+  let snow = fresh && SNOW_CODES.has(weather.code);
+  if (p.weatherMode !== 'local') {
+    [clouds, rain] = { clear: [0, 0], cloudy: [.7, 0], 'light-rain': [.85, .35], 'heavy-rain': [1, 1], snow: [.9, 0] }[p.weatherMode];
+    snow = p.weatherMode === 'snow';
+  }
+  const channels = [p.weatherMode, ...(p.dayNight ? [p.timeMode] : []), ...(p.seasons ? [p.seasonMode] : [])];
+  const manual = channels.some(mode => mode !== 'local'), localChannel = channels.includes('local');
   return {
     enabled: p.enabled, period: p.enabled && p.dayNight ? period : 'static',
     solarAngle: p.enabled && p.dayNight ? angle : Math.PI / 2, daylight: p.enabled && p.dayNight ? daylight : 1,
-    season: p.enabled && p.seasons ? seasonFor(local.month, location?.latitude ?? null) : 'neutral',
-    rainIntensity: p.enabled && p.rain && fresh && RAIN_CODES.has(weather.code) ? clamp(weather.rainMm / 3) : 0,
-    cloudCover: working && fresh ? weather.cloudCover : 0,
-    snow: p.enabled && p.seasons && fresh && SNOW_CODES.has(weather.code),
-    source: !working ? 'static' : fresh ? 'local-weather' : 'local-clock',
-    weatherStatus: !working ? 'off' : !location ? 'needs-location' : fresh ? 'fresh' : weather ? 'stale' : 'unavailable',
+    season: p.enabled && p.seasons ? p.seasonMode === 'local' ? seasonFor(local.month, location?.latitude ?? null) : p.seasonMode : 'neutral',
+    rainIntensity: p.enabled && p.rain ? rain : 0,
+    cloudCover: working ? clouds : 0,
+    snow: p.enabled && p.rain && snow,
+    source: !working ? 'static' : manual ? localChannel ? 'mixed' : 'manual' : fresh ? 'local-weather' : 'local-clock',
+    weatherStatus: !requiresWeather(p, deviceZone) ? 'off' : !location ? 'needs-location' : fresh ? 'fresh' : weather ? 'stale' : 'unavailable',
   };
 }
 export function terrainColour(color: string, kind: string, season: Season): string {
