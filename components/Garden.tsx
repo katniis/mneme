@@ -19,10 +19,12 @@ import {
 } from "../lib/garden";
 import { seedForTree, TREE_SPECIES, treeFamily } from '../lib/tree';
 import type { Removal } from '../lib/tree-removal';
+import useEnvironment from './environment/useEnvironment';
+import EnvironmentPanel from './environment/EnvironmentPanel';
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 const emptyDraft: Draft = { title: '', body: '', date: '', tree: '' };
-type Panel = "write" | "letters" | "detail" | "about" | null;
+type Panel = "write" | "letters" | "detail" | "about" | "environment" | null;
 
 export default function Garden() {
 	const clock = useRef<GardenState>({
@@ -65,6 +67,7 @@ export default function Garden() {
 			document.removeEventListener('visibilitychange', visible);
 		};
 	}, [removal, finishRemoval]);
+	const environment = useEnvironment();
 	const [recenter, setRecenter] = useState(0);
 	const [interacted, setInteracted] = useState(false);
 	const [toast, setToast] = useState("");
@@ -395,6 +398,7 @@ export default function Garden() {
 
 			<section
 				className={styles.world}
+				data-environment={environment.frame.enabled ? environment.frame.period : "off"}
 				aria-label="Interactive floating garden"
 			>
 				<div
@@ -404,6 +408,7 @@ export default function Garden() {
 				>
 					{ready && webgl ? (
 						<Scene
+							environment={environment.frame}
 							letters={garden.letters}
 							plots={garden.plots}
 							removal={removal}
@@ -453,6 +458,14 @@ export default function Garden() {
 						title="Recenter garden"
 					>
 						<Icon name="recenter" />
+					</button>
+					<button
+						className={styles.iconButton}
+						onClick={() => setPanel("environment")}
+						aria-label="Environment settings"
+						title="Environment settings"
+					>
+						<Icon name="environment" />
 					</button>
 					<button
 						className={styles.iconButton}
@@ -586,7 +599,9 @@ export default function Garden() {
 											? "pen"
 											: panel === "letters"
 												? "letter"
-												: "sprout"
+												: panel === "environment"
+													? "environment"
+													: "sprout"
 									}
 									size={18}
 								/>
@@ -596,7 +611,9 @@ export default function Garden() {
 										? "Your collection"
 										: panel === "about"
 											? "A little about Mneme"
-											: "A thought, growing"}
+											: panel === "environment"
+												? "Environment"
+												: "A thought, growing"}
 							</span>
 							<button
 								className={styles.closeButton}
@@ -905,6 +922,10 @@ export default function Garden() {
 							</div>
 						)}
 
+						{panel === "environment" && (
+							<EnvironmentPanel controller={environment} />
+						)}
+
 						{panel === "about" && (
 							<div className={styles.about}>
 								<h2 id="panel-title">Let time do its thing.</h2>
@@ -927,6 +948,16 @@ export default function Garden() {
 									Clearing browser data removes them. Letters
 									are not encrypted, and demo dates are not a
 									secure lock.
+								</p>
+								<h3>Weather, only if you ask.</h3>
+								<p>
+									Daylight follows your browser clock with no
+									location at all. If you choose to share an
+									approximate location or pick a city in
+									Environment settings, rounded coordinates are
+									sent to Open-Meteo for weather. Your letters
+									are never sent anywhere; they stay in this
+									browser.
 								</p>
 								<h3>Make yourself at home.</h3>
 								<p>

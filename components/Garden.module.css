@@ -16,6 +16,16 @@
 .primary:active { transform: translateY(0); }
 .primary:disabled, .deleteButton:disabled, .deleteConfirmation button:disabled { opacity: .6; cursor: wait; transform: none; }
 .world { position: relative; flex: 1; min-height: 450px; overflow: hidden; border-radius: 12px; background: #e9eee5; border: 1px solid #dfe5d9; }
+.world[data-environment='night'] { background: #101b2e; border-color: #22354f; }
+.world[data-environment='night'] .sceneHeading h1 { color: #edf2e8; }
+.world[data-environment='night'] .sceneHeading p, .world[data-environment='night'] .location { color: #c3d2bd; }
+.world[data-environment='night'] .sun { border-color: #c3d2bd; }
+.world[data-environment='night'] .gestures, .world[data-environment='night'] .gardenNote { color: #c3d2bd; }
+.world[data-environment='night'] .gardenNote span { color: #9fb4a4; }
+.world[data-environment='night'] .empty h2 { color: #edf2e8; }
+.world[data-environment='night'] .empty p { color: #c3d2bd; }
+.world[data-environment='night'] .textButton { color: #b9d3a8; }
+.world[data-environment='dusk'] .sceneHeading h1 { color: #3d3428; }
 .canvas { position: absolute; inset: 0; cursor: grab; touch-action: none; }
 .canvas:active { cursor: grabbing; }
 :global(body[data-tree-hover]) .canvas { cursor: pointer; }
