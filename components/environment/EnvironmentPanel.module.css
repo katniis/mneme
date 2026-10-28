@@ -1,0 +1,21 @@
+.panel { padding: 7px 25px 22px; color: #253d33; }
+.panel p { color: #596b5b; font-size: 13px; line-height: 1.65; }
+.panel h3 { font-size: 15px; margin: 24px 0 8px; }
+.panel button { min-height: 42px; padding: 9px 12px; border: 1px solid #cad5c3; border-radius: 5px; background: #f2f5ed; color: #345f40; font-size: 13px; }
+.panel button:hover { background: #e5ecdd; }
+.panel button:disabled { opacity: .5; cursor: default; }
+.panel input[type=checkbox] { width: 18px; height: 18px; accent-color: #345f40; flex-shrink: 0; }
+.master, .features label { display: flex; gap: 12px; align-items: center; min-height: 44px; font-size: 14px; }
+.master { font-weight: 600; margin-top: 20px; }
+.features { margin: 12px 0 20px; border: 0; border-top: 1px solid #dce3d4; padding: 12px 0 0; }
+.features legend { padding-top: 12px; font-size: 11px; color: #596b5b; }
+.features:disabled { opacity: .5; }
+.status, .selected { padding: 12px; background: #edf2e8; border-radius: 6px; }
+.search label { display: block; margin-bottom: 8px; font-size: 13px; }
+.search > div, .actions { display: flex; gap: 8px; }
+.search input { min-width: 0; width: 100%; border: 1px solid #cad5c3; border-radius: 5px; padding: 9px; background: #fff; color: #253d33; font: inherit; font-size: 14px; }
+.results { padding: 0; list-style: none; display: grid; gap: 6px; }
+.results button { text-align: left; width: 100%; }
+.selected { margin-top: 18px; font-size: 14px; }
+.attribution { margin-top: 24px; font-size: 11px !important; }
+.panel a { color: #345f40; text-decoration: underline; }

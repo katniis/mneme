@@ -18,13 +18,16 @@ import {
 	type GardenState,
 } from "../lib/garden";
 import { seedForTree, TREE_SPECIES, treeFamily } from '../lib/tree';
+import EnvironmentPanel from './environment/EnvironmentPanel';
+import { useEnvironment } from './environment/useEnvironment';
 import type { Removal } from '../lib/tree-removal';
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 const emptyDraft: Draft = { title: '', body: '', date: '', tree: '' };
-type Panel = "write" | "letters" | "detail" | "about" | null;
+type Panel = "write" | "letters" | "detail" | "about" | "environment" | null;
 
 export default function Garden() {
+  const environment = useEnvironment();
 	const clock = useRef<GardenState>({
 		version: 2,
 		plots: [],
@@ -209,7 +212,7 @@ export default function Garden() {
 			if (e.key === "Tab" && panelRef.current) {
 				const elements = Array.from(
 					panelRef.current.querySelectorAll<HTMLElement>(
-						'button:not(:disabled), input, textarea, select, [tabindex="0"]',
+						'button:not(:disabled), input:not(:disabled), textarea, select, a[href], [tabindex="0"]',
 					),
 				);
 				if (e.shiftKey && document.activeElement === elements[0]) {
@@ -394,7 +397,7 @@ export default function Garden() {
 			</header>
 
 			<section
-				className={styles.world}
+				className={`${styles.world} ${environment.frame.daylight < 0.55 ? styles.night : ''}`}
 				aria-label="Interactive floating garden"
 			>
 				<div
@@ -403,7 +406,7 @@ export default function Garden() {
 					onContextMenu={(e) => e.preventDefault()}
 				>
 					{ready && webgl ? (
-						<Scene
+						<Scene environment={environment.frame}
 							letters={garden.letters}
 							plots={garden.plots}
 							removal={removal}
@@ -446,6 +449,7 @@ export default function Garden() {
 					</p>
 				</div>
 				<div className={styles.sceneTools}>
+          <button className={styles.iconButton} onClick={() => setPanel("environment")} aria-label="Environment settings" title="Environment settings"><Icon name="environment" /></button>
 					<button
 						className={styles.iconButton}
 						onClick={() => setRecenter((n) => n + 1)}
@@ -594,7 +598,7 @@ export default function Garden() {
 									? "A moment for yourself"
 									: panel === "letters"
 										? "Your collection"
-										: panel === "about"
+										: panel === "environment" ? "Your local world" : panel === "about"
 											? "A little about Mneme"
 											: "A thought, growing"}
 							</span>
@@ -905,7 +909,8 @@ export default function Garden() {
 							</div>
 						)}
 
-						{panel === "about" && (
+						{panel === "environment" && <EnvironmentPanel controller={environment} />}
+            {panel === "about" && (
 							<div className={styles.about}>
 								<h2 id="panel-title">Let time do its thing.</h2>
 								<p>
@@ -928,7 +933,8 @@ export default function Garden() {
 									are not encrypted, and demo dates are not a
 									secure lock.
 								</p>
-								<h3>Make yourself at home.</h3>
+								<p>Optional environment settings use your real local clock. Choosing a weather location sends approximate coordinates or a city search to Open-Meteo; your letters stay here.</p>
+                <h3>Make yourself at home.</h3>
 								<p>
 									Drag to orbit. Scroll or pinch to zoom.
 									Right-drag, Shift-drag, or use two fingers
@@ -975,3 +981,4 @@ export default function Garden() {
 		</main>
 	);
 }
+
