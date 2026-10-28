@@ -19,6 +19,7 @@ test('optimized celestial models fit payload, geometry and texture budgets and p
     assert.ok(triangles <= (name === 'sun' ? 20000 : 6000));
     assert.ok(!doc.buffers.some((b: { uri?: string }) => b.uri));
     assert.ok(!(doc.extensionsRequired || []).some((x: string) => /draco|meshopt|basis/i.test(x)));
+    assert.ok(!(doc.materials || []).some((m: { extensions?: Record<string, unknown> }) => m.extensions?.KHR_materials_pbrSpecularGlossiness), 'convert legacy lunar materials so the current loader retains their texture');
     const bin = glb.subarray(28 + jsonLength);
     for (const image of doc.images || []) {
       assert.ok(!image.uri); const view = doc.bufferViews[image.bufferView];

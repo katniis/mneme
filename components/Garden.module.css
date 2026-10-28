@@ -168,3 +168,6 @@
   .toast { top: 200px; width: calc(100% - 30px); font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .app * { animation: none !important; transition: none !important; } }
+.night .sceneHeading, .night .sceneHeading p, .night .location, .night .gestures, .night .gardenNote, .night .gardenNote span, .night .empty, .night .empty p, .night .emptyIcon, .night .textButton, .night .loading { color: #edf2e8; }
+.sceneHeading, .sceneHeading p, .location, .gardenNote, .gardenNote span, .empty, .empty p, .emptyIcon, .textButton { transition: color 3s ease; }
+@media (prefers-reduced-motion: reduce) { .sceneHeading, .sceneHeading p, .location, .gardenNote, .gardenNote span, .empty, .empty p, .emptyIcon, .textButton { transition: none; } }

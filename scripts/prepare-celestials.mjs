@@ -24,6 +24,7 @@ try {
     let input = source, step = 0;
     const transform = (command, ...args) => { const output = join(temporary, `${name}-${step++}.glb`); cli(command, input, output, ...args); input = output; };
     if (name === 'sun') { transform('weld'); transform('simplify', '--ratio', '.02', '--error', '.001'); }
+    if (name === 'moon') transform('metalrough');
     transform('dedup'); transform('prune');
     transform('resize', '--width', '1024', '--height', '1024');
     transform('webp', '--quality', '85');
@@ -35,7 +36,20 @@ try {
     }, 0);
     if (triangles > (name === 'sun' ? 20000 : 6000)) throw new Error(`${name} exceeds its triangle budget (${triangles}). Inspect topology before changing simplification settings.`);
     if ((doc.extensionsRequired || []).some(x => /draco|meshopt|basis/i.test(x)) || doc.buffers.some(b => b.uri) || (doc.images || []).some(i => i.uri)) throw new Error('Output needs an external resource or decoder.');
-    manifest[name] = { sourceSha256: createHash('sha256').update(readFileSync(source)).digest('hex'), bytes: bytes.length, triangles, largestTextureDimension: 1024 };
+    const bin = bytes.subarray(28 + jsonLength);
+    let largestTextureDimension = 0;
+    for (const image of doc.images || []) {
+      const view = doc.bufferViews[image.bufferView], data = bin.subarray(view.byteOffset || 0, (view.byteOffset || 0) + view.byteLength);
+      const type = data.toString('ascii', 12, 16);
+      let width = 0, height = 0;
+      if (data.toString('ascii', 0, 4) !== 'RIFF') throw new Error('Output texture is not WebP.');
+      if (type === 'VP8X') { width = data.readUIntLE(24, 3) + 1; height = data.readUIntLE(27, 3) + 1; }
+      if (type === 'VP8 ') { width = data.readUInt16LE(26) & 0x3fff; height = data.readUInt16LE(28) & 0x3fff; }
+      if (type === 'VP8L') { const n = data.readUInt32LE(21); width = (n & 0x3fff) + 1; height = ((n >>> 14) & 0x3fff) + 1; }
+      if (!width || !height || width > 1024 || height > 1024) throw new Error('Output texture exceeds the 1024px budget.');
+      largestTextureDimension = Math.max(largestTextureDimension, width, height);
+    }
+    manifest[name] = { sourceSha256: createHash('sha256').update(readFileSync(source)).digest('hex'), bytes: bytes.length, triangles, largestTextureDimension };
     writeFileSync(join(temporary, `${name}.sky.glb`), bytes);
   }
   if (manifest.sun.bytes + manifest.moon.bytes > 3000000) throw new Error('Combined sky models exceed 3 MB.');

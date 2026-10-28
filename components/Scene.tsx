@@ -15,13 +15,17 @@ import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import { generateTree, type Voxel } from '../lib/tree';
-import { generateTerrain, type Position } from '../lib/terrain';
+import { generateTerrain, type Position, type TerrainVoxel } from '../lib/terrain';
+import { terrainColour, type EnvironmentFrame } from '../lib/environment';
+import EnvironmentSky from './environment/EnvironmentSky';
+import Rain from './environment/Rain';
 import type { GardenState, Letter } from '../lib/garden';
 import type { Removal } from '../lib/tree-removal';
 import Tree from './Tree';
 import usePixelTexture from './usePixelTexture';
 
 type Props = {
+  environment: import('../lib/environment').EnvironmentFrame;
 	letters: Letter[];
 	plots: Position[];
 	clock: MutableRefObject<GardenState>;
@@ -35,9 +39,11 @@ type Props = {
 	onReady: () => void;
 };
 
-function Terrain({ positions }: { positions: Position[] }) {
-	const data = useMemo(() => generateTerrain(positions), [positions]);
+function Terrain({ positions, data, environment }: { positions: Position[]; data: TerrainVoxel[]; environment: EnvironmentFrame }) {
 	const mesh = useRef<THREE.InstancedMesh>(null!);
+	const snow = useRef<THREE.InstancedMesh>(null!);
+	const material = useRef<THREE.MeshStandardMaterial>(null!);
+	const grass = useMemo(() => data.filter(v => v.kind === 'grass'), [data]);
 	const dummy = useMemo(() => new THREE.Object3D(), []);
 	const oldKeys = useRef(new Set<string>());
 	const arrivals = useRef(new Map<string, number>());
@@ -82,7 +88,15 @@ function Terrain({ positions }: { positions: Position[] }) {
 		if (mesh.current.instanceColor)
 			mesh.current.instanceColor.needsUpdate = true;
 	}, [data, positions]);
+	useLayoutEffect(() => {
+		data.forEach((v, i) => mesh.current.setColorAt(i, new THREE.Color(terrainColour(v.color, v.kind, environment.season))));
+		if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
+		dirty.current = true;
+	}, [data, environment.season, environment.snow]);
 	useFrame(() => {
+		if (document.hidden) return;
+		material.current.roughness = environment.rainIntensity > 0 ? .72 : 1;
+		material.current.color.setScalar(environment.rainIntensity > 0 ? .95 : 1);
 		if (!dirty.current && !arrivals.current.size) return;
 		let changing = false;
 		const now = performance.now() / 1000;
@@ -109,11 +123,21 @@ function Terrain({ positions }: { positions: Position[] }) {
 			else arrivals.current.delete(v.key);
 		});
 		mesh.current.instanceMatrix.needsUpdate = true;
+		if (snow.current) {
+			grass.forEach((v, i) => {
+				const arrival = arrivals.current.get(v.key);
+				const t = arrival === undefined ? 1 : THREE.MathUtils.clamp((now - arrival) / .65, 0, 1);
+				const smooth = t * t * (3 - 2 * t);
+				dummy.position.set(v.position[0], v.position[1] + v.size[1] / 2 + .025 - (1 - smooth) * .35, v.position[2]);
+				dummy.scale.set(v.size[0] * smooth, .05 * smooth, v.size[2] * smooth); dummy.updateMatrix(); snow.current.setMatrixAt(i, dummy.matrix);
+			});
+			snow.current.instanceMatrix.needsUpdate = true;
+		}
 		if (!changing && arrivals.current.size) arrivals.current.clear();
 		dirty.current = changing;
 	});
 	return (
-		<instancedMesh
+		<><instancedMesh
 			ref={mesh}
 			args={[undefined, undefined, data.length]}
 			castShadow
@@ -121,8 +145,9 @@ function Terrain({ positions }: { positions: Position[] }) {
 			frustumCulled={false}
 		>
 			<boxGeometry />
-			<meshStandardMaterial map={texture} roughness={1} />
+			<meshStandardMaterial ref={material} map={texture} roughness={1} />
 		</instancedMesh>
+		{environment.snow && <instancedMesh ref={snow} args={[undefined, undefined, grass.length]} receiveShadow raycast={() => {}} frustumCulled={false}><boxGeometry /><meshStandardMaterial color="#e2e9e5" roughness={1} /></instancedMesh>}</>
 	);
 }
 
@@ -149,6 +174,7 @@ function CameraRig({
 	} | null>(null);
 	const first = useRef(true);
 	useEffect(() => {
+		if (camera instanceof THREE.PerspectiveCamera) { camera.far = Math.max(200, radius * 24); camera.updateProjectionMatrix(); }
 		const mobile = size.width < 700;
 		const distance = Math.max(
 			height ? (mobile ? 30 : Math.max(24, height * 2.8)) : 16.5,
@@ -237,6 +263,7 @@ function CameraRig({
 }
 
 function World(props: Props) {
+	const ground = useMemo(() => generateTerrain(props.plots), [props.plots]);
 	const cache = useRef(new Map<number, Voxel[]>());
 	const trees = useMemo(
 		() =>
@@ -290,29 +317,9 @@ function World(props: Props) {
 	}, [gl, props.removal, props.onRemovalComplete]);
 	return (
 		<>
-			<color attach="background" args={["#e9eee5"]} />
-			<fog attach="fog" args={["#e9eee5", 80, 190]} />
-			<ambientLight intensity={0.8} />
-			<hemisphereLight args={["#fff4d9", "#a5b19f", 1.6]} />
-			<directionalLight
-				position={[-8, 14, 5]}
-				intensity={2.5}
-				color="#fff1cf"
-				castShadow
-				shadow-mapSize={[2048, 2048]}
-				shadow-camera-left={-22}
-				shadow-camera-right={22}
-				shadow-camera-top={22}
-				shadow-camera-bottom={-22}
-				shadow-bias={-0.0004}
-				shadow-normalBias={0.04}
-			/>
-			<directionalLight
-				position={[8, -6, 8]}
-				intensity={0.65}
-				color="#dce7d7"
-			/>
-			<Terrain positions={positions} />
+      <EnvironmentSky frame={props.environment} {...extent} />
+      <Terrain positions={positions} data={ground} environment={props.environment} />
+      <Rain ground={ground} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
 			{trees.map(({ letter, data }) => (
 				<Tree
 					key={letter.id}
