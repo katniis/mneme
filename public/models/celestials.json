@@ -1,0 +1,14 @@
+{
+  "sun": {
+    "sourceSha256": "f39f1e86a2c0b87133f7fa3bfbb1819ee966f309970d294681c6991388fe096b",
+    "bytes": 473004,
+    "triangles": 19947,
+    "largestTextureDimension": 1024
+  },
+  "moon": {
+    "sourceSha256": "57ff5c643140243535d9927c13e5c5c8025020975d273fdcfed702871a976d84",
+    "bytes": 316308,
+    "triangles": 5888,
+    "largestTextureDimension": 1024
+  }
+}
