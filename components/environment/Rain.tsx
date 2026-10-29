@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CELL, type TerrainVoxel } from '../../lib/terrain';
 import type { Vec3 } from '../../lib/tree';
 import { RAIN_LIMITS } from '../../lib/environment';
-import { makeRainField, rainPosition, rainSpawn, rainStreakSize, type RainSpawn } from '../../lib/atmosphere';
+import { makeParticleField, rainPosition, rainSpawn, rainStreakSize, type RainSpawn, type GroundColumn } from '../../lib/atmosphere';
+import { fadeNearCamera } from './particleMaterial';
 import useReducedMotion from './useReducedMotion';
 
-function fadeNearCamera(shader: Parameters<THREE.Material['onBeforeCompile']>[0]) {
-  shader.vertexShader = 'varying float vRainDistance;\n' + shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvRainDistance = length(mvPosition.xyz);');
-  shader.fragmentShader = 'varying float vRainDistance;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= smoothstep(1.0, 3.0, vRainDistance);\n#include <opaque_fragment>');
-}
-export default function Rain({ ground, intensity, enabled, center, radius, treeTop }: { ground: TerrainVoxel[]; intensity: number; enabled: boolean; center: [number, number]; radius: number; treeTop: number }) {
+export default function Rain({ columns, intensity, enabled, center, radius, treeTop }: { columns: ReadonlyMap<string, GroundColumn>; intensity: number; enabled: boolean; center: [number, number]; radius: number; treeTop: number }) {
   const reduced = useReducedMotion();
   const [mobile, setMobile] = useState(true);
   useEffect(() => {
@@ -21,10 +17,6 @@ export default function Rain({ ground, intensity, enabled, center, radius, treeT
   }, []);
   const limits = RAIN_LIMITS[mobile ? 'mobile' : 'desktop'];
   const drops = useRef<THREE.InstancedMesh>(null!), splashes = useRef<THREE.InstancedMesh>(null!);
-  const columns = useMemo(() => new Map(ground.filter(v => v.kind === 'grass').map(v => [
-    `${Math.round(v.position[0] / CELL)}:${Math.round(v.position[2] / CELL)}`,
-    { x: v.position[0], y: v.position[1] + v.size[1] / 2, z: v.position[2] },
-  ])), [ground]);
   const data = useMemo(() => ({ dummy: new THREE.Object3D(), fallback: new THREE.Vector3(),
     spawns: Array<RainSpawn | null>(limits.drops).fill(null), ages: new Float64Array(limits.drops), cycles: new Uint32Array(limits.drops), hit: new Uint8Array(limits.drops),
     splashes: Array.from({ length: limits.splashes }, () => ({ x: 0, y: 0, z: 0, at: -100 })), next: 0 }), [limits]);
@@ -38,7 +30,7 @@ export default function Rain({ ground, intensity, enabled, center, radius, treeT
     const count = Math.min(limits.drops, Math.round(limits.drops * amount.current));
     drops.current.count = count;
     const target = (controls as unknown as { target?: THREE.Vector3 })?.target ?? data.fallback.set(center[0], 0, center[1]);
-    const field = makeRainField(center, radius, treeTop, { position: camera.position.toArray() as Vec3, target: target.toArray() as Vec3, aspect: (camera as THREE.PerspectiveCamera).aspect });
+    const field = makeParticleField(center, radius, treeTop, { position: camera.position.toArray() as Vec3, target: target.toArray() as Vec3, aspect: (camera as THREE.PerspectiveCamera).aspect });
     for (let i = 0; i < count; i++) {
       let spawn = data.spawns[i];
       if (!spawn || rainPosition(spawn, data.ages[i]).finished) {

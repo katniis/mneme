@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeRainField, rainSpawn, rainPosition, rainStreakSize } from '../lib/atmosphere.ts';
+import { makeParticleField, rainSpawn, rainPosition, rainStreakSize } from '../lib/atmosphere.ts';
 import { RAIN_LIMITS, terrainColour } from '../lib/environment.ts';
 import { CELL, generateTerrain, placement, type Position } from '../lib/terrain.ts';
 
 test('rain covers surrounding void and only impacts actual grass cells', () => {
-  const field = makeRainField([0, 0], 4, 8, { position: [0, 12, 20], target: [0, 0, 0], aspect: 1 });
+  const field = makeParticleField([0, 0], 4, 8, { position: [0, 12, 20], target: [0, 0, 0], aspect: 1 });
   const ground = new Map([['0:0', { x: 0, y: .4, z: 0 }]]);
   let land = 0, voids = 0;
   for (let i = 0; i < 10000; i++) {
@@ -32,11 +32,11 @@ test('rain stops on land, falls below void and finishes without duplicate impact
   assert.equal(rainPosition({ ...spawn, impactY: null }, 3).finished, true);
 });
 test('field bounds and degenerate camera directions are finite and existing spawns stay latched', () => {
-  const first = makeRainField([0, 0], 4, 8, { position: [0, 20, 0], target: [0, 0, 0], aspect: 1 });
+  const first = makeParticleField([0, 0], 4, 8, { position: [0, 20, 0], target: [0, 0, 0], aspect: 1 });
   assert.deepEqual(first.forward, [0, 1]); assert.deepEqual(first.right, [1, 0]);
   assert.equal(first.halfDepth, 13); assert.equal(first.top, 32); assert.equal(first.bottom, -16);
   const spawn = rainSpawn(7, 1, first, new Map()), before = JSON.stringify(spawn);
-  const second = makeRainField([50, 20], 30, 14, { position: [80, 80, 100], target: [50, 0, 20], aspect: 2 });
+  const second = makeParticleField([50, 20], 30, 14, { position: [80, 80, 100], target: [50, 0, 20], aspect: 2 });
   assert.ok(second.halfDepth >= 54); assert.ok(second.halfWidth >= 108);
   assert.ok(Math.abs(second.forward[0] * second.right[0] + second.forward[1] * second.right[1]) < 1e-12);
   rainPosition(spawn, 1); assert.equal(JSON.stringify(spawn), before);
@@ -46,7 +46,7 @@ test('distant and near-camera rain stays readable without huge streaks', () => {
   assert.ok(rainStreakSize(200).width >= .1 && rainStreakSize(200).length >= .7);
   assert.ok(rainStreakSize(2).length < .03);
   assert.ok(rainStreakSize(1000).length <= 1.5 && rainStreakSize(1000).width <= .16);
-  const high = makeRainField([0, 0], 32, 12, { position: [100, 100, 100], target: [0, 0, 0], aspect: .5 });
+  const high = makeParticleField([0, 0], 32, 12, { position: [100, 100, 100], target: [0, 0, 0], aspect: .5 });
   assert.ok(high.top > 200 && high.bottom < -50);
 });
 test('atmospheric effects never mutate retained 49-plot ground and keep pool ceilings', () => {

@@ -19,6 +19,8 @@ import { generateTerrain, type Position, type TerrainVoxel } from '../lib/terrai
 import { terrainColour, type EnvironmentFrame } from '../lib/environment';
 import EnvironmentSky from './environment/EnvironmentSky';
 import Rain from './environment/Rain';
+import Snow from './environment/Snow';
+import { groundColumns } from '../lib/atmosphere';
 import type { GardenState, Letter } from '../lib/garden';
 import type { Removal } from '../lib/tree-removal';
 import Tree from './Tree';
@@ -264,6 +266,7 @@ function CameraRig({
 
 function World(props: Props) {
 	const ground = useMemo(() => generateTerrain(props.plots), [props.plots]);
+  const columns = useMemo(() => groundColumns(ground), [ground]);
 	const cache = useRef(new Map<number, Voxel[]>());
 	const trees = useMemo(
 		() =>
@@ -319,7 +322,8 @@ function World(props: Props) {
 		<>
       <EnvironmentSky frame={props.environment} treeTop={height} {...extent} />
       <Terrain positions={positions} data={ground} environment={props.environment} />
-      <Rain {...extent} treeTop={height} ground={ground} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
+      <Rain {...extent} treeTop={height} columns={columns} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
+      <Snow {...extent} treeTop={height} columns={columns} enabled={props.environment.enabled && props.environment.snow} />
 			{trees.map(({ letter, data }) => (
 				<Tree
 					key={letter.id}

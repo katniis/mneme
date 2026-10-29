@@ -1,11 +1,18 @@
-import { CELL } from './terrain.ts';
+import { CELL, type TerrainVoxel } from './terrain.ts';
 import type { Vec3 } from './tree.ts';
 
 export type GroundColumn = { x: number; y: number; z: number };
-export type RainField = { center: [number, number]; right: [number, number]; forward: [number, number]; halfWidth: number; halfDepth: number; top: number; bottom: number };
+export type ParticleField = { center: [number, number]; right: [number, number]; forward: [number, number]; halfWidth: number; halfDepth: number; top: number; bottom: number };
+export type ParticlePose = { position: Vec3; rotation: Vec3; size: Vec3; opacity: number; finished: boolean };
 export type RainSpawn = { x: number; z: number; top: number; bottom: number; impactY: number | null };
 function hash(n: number) { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; }
-export function makeRainField(center: [number, number], radius: number, treeTop: number, camera: { position: Vec3; target: Vec3; aspect: number }): RainField {
+export function groundColumns(terrain: readonly TerrainVoxel[]): ReadonlyMap<string, GroundColumn> {
+  return new Map(terrain.filter(v => v.kind === 'grass').map(v => [
+    `${Math.round(v.position[0] / CELL)}:${Math.round(v.position[2] / CELL)}`,
+    { x: v.position[0], y: v.position[1] + v.size[1] / 2, z: v.position[2] },
+  ]));
+}
+export function makeParticleField(center: [number, number], radius: number, treeTop: number, camera: { position: Vec3; target: Vec3; aspect: number }): ParticleField {
   const dx = camera.target[0] - camera.position[0], dz = camera.target[2] - camera.position[2];
   const horizontal = Math.hypot(dx, dz), distance = Math.hypot(dx, camera.target[1] - camera.position[1], dz);
   const forward: [number, number] = horizontal > .001 ? [dx / horizontal, dz / horizontal] : [0, 1];
@@ -14,7 +21,7 @@ export function makeRainField(center: [number, number], radius: number, treeTop:
   return { center: [camera.target[0] ?? center[0], camera.target[2] ?? center[1]], forward, right, halfDepth,
     halfWidth: halfDepth * Math.max(.7, Math.min(2, camera.aspect)), top: Math.max(treeTop + 12, 16, camera.position[1] + distance * .6), bottom: Math.min(-16, -.8 * radius, camera.position[1] - distance * .9) };
 }
-export function rainSpawn(index: number, cycle: number, field: RainField, ground: ReadonlyMap<string, GroundColumn>): RainSpawn {
+export function rainSpawn(index: number, cycle: number, field: ParticleField, ground: ReadonlyMap<string, GroundColumn>): RainSpawn {
   const seed = hash(index + cycle * 1201 + 71);
   const across = (seed / 4294967296 * 2 - 1) * field.halfWidth;
   const along = (hash(seed) / 4294967296 * 2 - 1) * field.halfDepth;
