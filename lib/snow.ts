@@ -26,5 +26,6 @@ export function sampleSnow(p: SnowParticle, age: number, columns: ReadonlyMap<st
 }
 
 export function snowSize(base: number, distance: number): number {
-  return Math.max(.035, Math.min(.5, base * (1 + Math.max(0, distance) / 45)));
+  const d = Math.max(0, distance);
+  return Math.min(d * .003, Math.max(.035, Math.min(.5, base * (1 + d / 45))));
 }

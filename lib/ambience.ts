@@ -65,3 +65,7 @@ export function sampleAmbientParticle(p: AmbientParticle, age: number, out: Part
   const size = p.kind === 'mote' ? .035 : p.kind === 'firefly' ? .055 : .13;
   out.size[0] = size; out.size[1] = debris ? .02 : size; out.size[2] = debris ? size * .55 : size;
 }
+
+export function ambientSizeScale(kind: AmbienceKind, distance: number): number {
+  return kind === 'firefly' ? Math.max(1, Math.min(12, distance / 25)) : Math.min(2.5, 1 + Math.max(0, distance) / 90);
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sampleAmbience, leafSources, leafOrigin, spawnAmbient, sampleAmbientParticle, AMBIENCE_LIMITS } from '../lib/ambience.ts';
+import { sampleAmbience, leafSources, leafOrigin, spawnAmbient, sampleAmbientParticle, ambientSizeScale, AMBIENCE_LIMITS } from '../lib/ambience.ts';
 import { DEFAULT_ENVIRONMENT, resolveEnvironment, type Season, type TimeMode } from '../lib/environment.ts';
 import { generateTree, seedForTree, elementProgress } from '../lib/tree.ts';
 import { groundHeight } from '../lib/terrain.ts';
@@ -57,4 +57,13 @@ test('ambient motion is seeded, reuses its pose and finishes without changing or
     assert.equal(out.position, position); assert.equal(JSON.stringify(p), before);
     sampleAmbientParticle(p, p.duration, out); assert.equal(out.finished, true); assert.equal(out.opacity, 0);
   }
+});
+
+test('distant fireflies keep a small readable angular size within the existing pool budget', () => {
+  for (const distance of [40, 80, 200]) {
+    const angularSize = .055 * ambientSizeScale('firefly', distance) / distance;
+    assert.ok(angularSize >= .0018 && angularSize <= .0025);
+    assert.ok(ambientSizeScale('mote', distance) <= 2.5);
+  }
+  assert.ok(ambientSizeScale('firefly', 2000) <= 12);
 });

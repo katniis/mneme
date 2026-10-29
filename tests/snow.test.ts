@@ -33,8 +33,7 @@ test('snow drifts from a latched origin and collides at its current horizontal p
 });
 
 test('snow remains readable at distance without oversized near-camera flakes', () => {
-  for (const d of [0, 2, 40, 200, 2000]) {
-    assert.equal(snowSize(.06, d), Math.max(.035, Math.min(.5, .06 * (1 + d / 45))));
-  }
+  for (const d of [2, 10, 40, 200]) assert.ok(snowSize(.06, d) <= d * .003 + 1e-12);
+  assert.equal(snowSize(.06, 0), 0);
   assert.ok(snowSize(.06, 200) > .2); assert.equal(snowSize(.09, 2000), .5);
 });
