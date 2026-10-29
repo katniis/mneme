@@ -600,7 +600,7 @@ export default function Garden() {
 									? "A moment for yourself"
 									: panel === "letters"
 										? "Your collection"
-										: panel === "environment" ? "Your local world" : panel === "about"
+										: panel === "environment" ? "Garden atmosphere" : panel === "about"
 											? "A little about Mneme"
 											: "A thought, growing"}
 							</span>

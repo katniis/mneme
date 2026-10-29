@@ -248,6 +248,11 @@ This section supersedes earlier cloud/celestial rendering notes. At the user's f
 
 Physical mobile FPS and real GPS hardware were not measured; browser fixtures used synthetic letters/locations. Changes remain local on the isolated feature branch, with no merge, push or deployment.
 
+## Environment panel refresh — 2026-10-28
+
+Replaced dropdowns with visible radio choices, compact switches, and Auto wording. Environment state and persistence are unchanged. Production build passed. Tests and browser/visual checks were skipped at the user's request.
+
+
 
 ## Natural daylight — 2026-10-29
 

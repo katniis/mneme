@@ -2,19 +2,19 @@
 
 ## Project Structure & Module Organization
 
-This guide covers the Mneme app in `mneme/`. Leave sibling prototype folders untouched unless explicitly requested.
+This guide covers the Mneme repository root (the directory containing `package.json`). Leave `prev-algo/`, sibling prototypes, and other worktree checkouts untouched unless explicitly requested.
 
-- `mneme/app/`: Next.js App Router entry points, layout, global CSS, and favicon.
-- `mneme/components/`: `Garden` manages the interface and persistence; `Scene` renders the Three.js world; `Icon` supplies interface icons. Component styles use CSS Modules.
-- `mneme/lib/`: garden state and clock math, seeded tree generation, terrain generation, and permanent placement.
-- `mneme/tests/`: deterministic logic tests. `screenshots/`, `recordings/`, and `VERIFICATION.md` hold visual evidence; textures and geometry are generated locally.
+- `app/`: Next.js App Router entry points, layout, global CSS, and favicon.
+- `components/`: `Garden` manages the interface and persistence; `Scene` composes the Three.js world; `Tree` handles growth and removal rendering. Component styles use CSS Modules.
+- `components/environment/`: atmosphere controls, local weather orchestration, lighting/sky, instanced rain/snow/seasonal particles, and the optional audio lifecycle.
+- `lib/`: deterministic garden/clock, tree/terrain/removal, environment/daylight/particle, weather validation, and generated soundscape logic. `ambient-audio.ts` builds the Web Audio graph; its hook owns browser resources.
+- `tests/`: deterministic logic tests. `screenshots/`, `recordings/`, and `VERIFICATION.md` hold visual evidence; textures and geometry are generated locally.
 
 ## Build, Test, and Development Commands
 
-Use Node.js 24. Run commands from `mneme/`:
+Use Node.js 24. Run commands from the repository root:
 
 ```sh
-cd mneme
 npm install
 npm run dev
 ```
@@ -29,20 +29,30 @@ npm run dev
 
 Use TypeScript, two-space indentation, single quotes, and semicolons. Name React components in PascalCase, functions and variables in camelCase, and shared constants in UPPER_SNAKE_CASE. Use `*.module.css` for component styling. No formatter or lint command is configured; follow neighboring files.
 
-Keep generation logic in `lib/` and rendering in `Scene.tsx`. Preserve stored seeds, tree positions, and the shared simulation clock. Reuse instanced geometry and update animation transforms outside React state.
+Keep generation and resolver logic in `lib/`, rendering in scene components, and browser resource lifecycles in hooks. Preserve stored seeds, tree positions, retained plots after deletion, and the shared simulation clock. Reuse instanced geometry and scratch objects; update animation transforms outside React state.
+
+## Environment and Audio Invariants
+
+- Resolve real local time independently of the demo growth clock. Preserve independent Auto/manual time, season, and weather choices and the master/individual effect switches.
+- Migrate preferences through the existing readers and stable storage keys without touching letters. Legacy Cloudy becomes Clear; provider cloud cover still affects lighting. The scene uses procedural sky/lighting and stars, with no cloud geometry or sun/moon models.
+- Keep moving particle pools bounded on desktop and mobile. Reduced motion hides moving decoration and precipitation while retaining static lighting/ground cover; hidden tabs pause animation without catch-up.
+- Request location only through an explicit setup action. Weather requests require a configured location and demand from active effects; send approximate coordinates or city searches to Open-Meteo, never letter content. Clearing location also clears its weather cache.
+- Nature sounds starts Off each load and persists only volume. Create/resume audio from an explicit user gesture, bound voices and scheduling, fade transitions, pause on hidden tabs/master-off/WebGL loss, and close resources on Off/unmount. Reduced motion and Living details do not control sound. Generate sounds locally with Web Audio.
 
 ## Testing Guidelines
 
-Add tests to `tests/*.test.ts` using `node:test` and `node:assert/strict`. Name cases after observable behavior. Cover seed determinism, physical attachments, connected terrain, retained existing rock, clock boundaries, and storage validation when relevant. No coverage percentage is enforced.
+Add tests to `tests/*.test.ts` using `node:test` and `node:assert/strict`. Name cases after observable behavior. Cover seed determinism, physical attachments, connected terrain, retained land/reuse, clock boundaries, and storage validation when relevant. For atmosphere changes, cover time/season/weather resolution and migrations, particle bounds/collision, and deterministic sound profiles/events.
 
 Run tests, type checking, and the production build before submitting code changes. For visual changes, inspect desktop and mobile rendering, exercise planting and reload persistence, and capture screenshots. Record actual checks in `VERIFICATION.md`.
 
+For audio lifecycle changes, check opt-in, volume, reload, visibility, rapid enable/disable, rejected resume, and WebGL loss. Distinguish offline waveform checks from subjective listening, browser emulation from physical-device performance, and accelerated clocks from prolonged playback.
+
 ## Commit & Pull Request Guidelines
 
-No Git history is available in this checkout. Use short imperative commit subjects, such as `Connect island rock cores`. PRs should explain the problem, resulting behavior, validation, and limitations; link relevant issues and include screenshots for visual changes.
+Use short imperative commit subjects without assistant attribution, such as `Connect island rock cores`. PRs should explain the problem, resulting behavior, validation, and limitations; link relevant issues and include screenshots for visual changes.
 
 ## Configuration & Agent Instructions
 
-The prototype needs no environment variables or backend. Preserve Git metadata and existing environment files. Letters remain browser-local and unencrypted; avoid exposing real letter content in test artifacts.
+The prototype needs no environment variables or backend. Preserve Git metadata and existing environment files. Letters remain browser-local and unencrypted; use synthetic letters in test artifacts. Open-Meteo is optional; manual atmosphere choices work offline.
 
-Before Next.js-specific changes, read `mneme/AGENTS.md` and the relevant bundled guides in `mneme/node_modules/next/dist/docs/`.
+Before Next.js-specific changes, read the relevant bundled guides in `node_modules/next/dist/docs/`.
