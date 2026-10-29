@@ -2,12 +2,13 @@ import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
 import type { Letter } from './garden.ts';
 import type { Position } from './terrain.ts';
 import { elementProgress, random, type Vec3, type Voxel } from './tree.ts';
+import type { Organ } from './trees/types.ts';
 
 export type TreeRecord = Pick<Letter, 'id' | 'seed' | 'position' | 'planted' | 'reveal'>;
 export type Removal = { tree: TreeRecord; startedAt: number };
 export type FrozenBlock = {
   sourceIndex: number; position: Vec3; size: Vec3; rotation: Vec3;
-  color: string; kind: 'wood' | 'leaf';
+  color: string; kind: 'wood' | 'leaf'; organ?: Organ;
 };
 
 export function freezeBlocks(data: Voxel[], displayedGrowth: number): FrozenBlock[] {
@@ -16,7 +17,7 @@ export function freezeBlocks(data: Voxel[], displayedGrowth: number): FrozenBloc
     const g = elementProgress(v, displayedGrowth);
     if (g <= 0) return;
     const girth = v.kind === 'wood' && v.size[0] > .22 ? .25 + .75 * Math.min(1, displayedGrowth / .5) : 1;
-    blocks.push({ sourceIndex, color: v.color, kind: v.kind,
+    blocks.push({ sourceIndex, color: v.color, kind: v.kind, organ: v.organ,
       position: v.position.map((n, axis) => v.anchor[axis] + (n - v.anchor[axis]) * g) as Vec3,
       size: [v.size[0] * g * girth, v.size[1] * g, v.size[2] * g * girth],
       rotation: v.rotation ?? [0, 0, 0],
@@ -69,7 +70,7 @@ export function restAngle(blocks: FrozenBlock[], position: Position, direction: 
   const fall = new Quaternion(), rotation = new Quaternion(), matrix = new Matrix4(), center = new Vector3();
   const base = sampleGround(...position);
   // Fine twigs bend on impact; only structural wood can support the fallen tree.
-  const wood = blocks.filter(b => b.kind === 'wood' && Math.min(b.size[0], b.size[2]) >= .12 && b.position[1] - b.size[1] / 2 > .3);
+  const wood = blocks.filter(b => (b.organ ? b.organ === 'trunk' || b.organ === 'branch' : b.kind === 'wood' && Math.min(b.size[0], b.size[2]) >= .12) && b.position[1] - b.size[1] / 2 > .3);
   const touches = (angle: number) => {
     fall.setFromAxisAngle(axis, angle);
     return wood.some(b => {

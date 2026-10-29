@@ -36,7 +36,7 @@ function motif(species: TreeSpecies, organ: Site['organ']): Tile[] {
     }
     return tiles;
   }
-  if (organ === 'fruit' || organ === 'bud') return [{ position: [0, 0, 0], size: organ === 'bud' ? [.045, .06, .045] : [.08, .16, .08] }];
+  if (organ === 'fruit' || organ === 'bud') return [{ position: [0, 0, organ === 'fruit' ? .1 : 0], size: organ === 'bud' ? [.045, .06, .045] : [.08, .08, .16] }];
   if (organ === 'needle') {
     const tiles: Tile[] = [];
     const count = species === 'Pine' ? 2 : 5;
