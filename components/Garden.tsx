@@ -20,6 +20,7 @@ import {
 import { seedForTree, TREE_SPECIES, treeFamily } from '../lib/tree';
 import EnvironmentPanel from './environment/EnvironmentPanel';
 import { useEnvironment } from './environment/useEnvironment';
+import { useAmbientAudio } from './environment/useAmbientAudio';
 import type { Removal } from '../lib/tree-removal';
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
@@ -73,6 +74,7 @@ export default function Garden() {
 	const [toast, setToast] = useState("");
 	const [storageError, setStorageError] = useState("");
 	const [webgl, setWebgl] = useState(true);
+  const sound = useAmbientAudio(environment.frame, webgl && sceneReady);
 	const storageBlocked = useRef(false);
 	const writeButton = useRef<HTMLButtonElement>(null);
 	const panelRef = useRef<HTMLElement>(null);
@@ -909,7 +911,7 @@ export default function Garden() {
 							</div>
 						)}
 
-						{panel === "environment" && <EnvironmentPanel controller={environment} />}
+						{panel === "environment" && <EnvironmentPanel controller={environment} sound={sound} />}
             {panel === "about" && (
 							<div className={styles.about}>
 								<h2 id="panel-title">Let time do its thing.</h2>

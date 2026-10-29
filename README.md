@@ -40,9 +40,13 @@ No environment variables, credentials, API routes, accounts, or backend are requ
 
 ## Your data
 
-Environment settings can follow your real local day and night independently of demo growth time, or let you choose time of day, island season, and weather separately. Each selector has Follow local, and manual choices work offline. Seasonal island colours and local rain use an optional location or selected city; there is a master switch and a switch for each effect. Weather is approximate, model-derived Open-Meteo data. No location prompt or weather request occurs before setup. Choosing a location sends approximate coordinates to Open-Meteo; city searches send the city name. Letters are never included.
+Environment settings can follow your real local day and night independently of demo growth time, or let you choose time of day, island season, and weather separately. Each group has an Auto option, and manual choices work offline. Seasonal island colours and local rain use an optional location or selected city; there is a master switch and a switch for each effect. Weather is approximate, model-derived Open-Meteo data. No location prompt or weather request occurs before setup. Choosing a location sends approximate coordinates to Open-Meteo; city searches send the city name. Letters are never included.
 
 `mneme-environment-v1` stores these preferences and the chosen approximate location; `mneme-weather-v1` stores weather cache data. Clear location removes that cache. Turning effects off retains the individual preferences. Sky colours, lighting, and stars represent day and night; overcast weather changes atmospheric lighting. No cloud geometry or sun/moon models are loaded.
+
+Living details adds restrained seasonal pollen, petals, leaves and warm-season evening fireflies. Petals/leaves come from visible, appropriate foliage; they do not remove tree blocks. Snow includes drifting flakes throughout the surrounding view and cosmetic ground cover, independently of the chosen season. Clear, Light rain, Heavy rain and Snow have manual choices; old Cloudy selections become Clear. Reduced motion hides moving particles while retaining static ground/lighting. Environment preference version 3 migrates older settings without touching letters.
+
+Nature sounds is optional generated Web Audio: soft breeze/rain textures and stylized bird/insect calls follow the selected time, season and weather. It starts Off on every load and creates no audio session before you enable it. `mneme-audio-v1` remembers volume only. Hidden tabs, atmosphere off and unavailable WebGL pause playback; Off closes the session. No audio files, microphone permission or external sound service are used.
 
 Only browser local storage is used. `mneme-garden-v1` stores the letters, seeds, positions, and simulation state; `mneme-draft-v1` stores the draft. Rendering caches and GPU geometry stay in memory.
 
@@ -80,6 +84,6 @@ Tree data is generated once per seed for the current scene. Each tree uses one i
 
 ## Remaining limits
 
-The art uses constrained botanical archetypes rather than species-accurate models. Some crowns overlap in projection as you orbit. Eight trees were exercised, but physical mobile hardware, real software-keyboard behavior, screen readers, and long-session GPU performance were not tested. There is no LOD system for very large gardens. If the browser loses an already-running WebGL context, recovery depends on the browser; reload retains saved letters.
+The art uses constrained botanical archetypes rather than species-accurate models. Some crowns overlap in projection as you orbit. Synthetic 1- and 49-tree gardens were exercised on desktop and mobile emulation; physical mobile hardware, real software-keyboard behavior, screen readers, and long-session GPU performance were not tested. There is no LOD system for very large gardens. If the browser loses an already-running WebGL context, recovery depends on the browser; reload retains saved letters.
 
-No backend, accounts, cloud storage, AI, weather, sound, or wind effects were added.
+No backend, accounts, cloud storage or AI processing is used. Wind affects decorative particles and generated sound rather than deforming tree geometry. Audio timbre has digital signal checks and saved audition samples; subjective listening and physical-device performance still need human/device review.

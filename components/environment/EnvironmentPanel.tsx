@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { searchPlaces } from '../../lib/weather';
 import { TIME_MODES, SEASON_MODES, WEATHER_MODES, type EnvironmentLocation } from '../../lib/environment';
 import type { EnvironmentController } from './useEnvironment';
+import type { AmbientAudioController } from './useAmbientAudio';
 import styles from './EnvironmentPanel.module.css';
 
 function modeLabel(value: string) {
@@ -33,7 +34,7 @@ function ChoiceGroup<T extends string>({ name, title, value, options, disabled, 
   </section>;
 }
 
-export default function EnvironmentPanel({ controller: c }: { controller: EnvironmentController }) {
+export default function EnvironmentPanel({ controller: c, sound }: { controller: EnvironmentController; sound: AmbientAudioController }) {
   const [query, setQuery] = useState('');
   const [places, setPlaces] = useState<EnvironmentLocation[]>([]);
   const [status, setStatus] = useState('');
@@ -66,6 +67,12 @@ export default function EnvironmentPanel({ controller: c }: { controller: Enviro
         caption={!available ? 'Atmosphere is off.' : c.prefs.weatherMode === 'local' ? c.frame.weatherStatus === 'fresh' ? 'Current conditions near you.' : c.frame.weatherStatus === 'needs-location' ? 'Add a location to match your weather.' : 'Weather unavailable. You can choose a setting above.' : 'Your chosen weather, whatever the forecast.'} />
       <Switch label="Rain & snow" checked={c.prefs.rain} disabled={!c.prefs.enabled} onChange={rain => c.updatePrefs({ rain })} />
       <button className={styles.reset} type="button" onClick={() => c.updatePrefs({ timeMode: 'local', seasonMode: 'local', weatherMode: 'local' })}>Reset to automatic</button>
+    </div>
+    <div className={styles.sound}>
+      <Switch label="Nature sounds" checked={sound.enabled} disabled={!sound.enabled && !sound.available} onChange={enabled => { void sound.setEnabled(enabled); }} />
+      {sound.enabled ? <label className={styles.volume}>Volume <output>{Math.round(sound.volume * 100)}%</output><input type="range" aria-label="Nature sound volume" min="0" max="100" step="1" value={Math.round(sound.volume * 100)} onChange={e => sound.setVolume(Number(e.target.value) / 100)} /></label> : <p className={styles.caption}>A little birdsong, breeze, and quiet night sounds.</p>}
+      {sound.status && <p role="status">{sound.status}</p>}
+      {sound.enabled && !sound.active && sound.available && <button type="button" onClick={() => { void sound.resume(); }}>Resume sound</button>}
     </div>
     <p className={styles.status}>Time zone · <strong>{c.zone.replaceAll('_', ' ')}</strong><br />{!available ? 'Turn on atmosphere to change your surroundings.' : !c.weatherNeeded ? 'Automatic weather updates are paused.' : c.frame.weatherStatus === 'fresh' ? 'Weather is up to date.' : 'Auto uses your clock. Add a location for seasons and weather.'}</p>
     <h3>Weather location</h3>
