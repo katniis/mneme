@@ -10,14 +10,16 @@ import { fadeNearCamera } from './particleMaterial';
 import useReducedMotion from './useReducedMotion';
 
 type Props = { frame: EnvironmentFrame; columns: ReadonlyMap<string, GroundColumn>; sources: readonly LeafSource[]; clock: MutableRefObject<GardenState> };
+const WINGS = new Float32Array([-.5, .4, -.2, 0, 0, .25, 0, 0, -.25, 0, 0, -.25, 0, 0, .25, .5, .4, -.2]);
 function fadeParticles(shader: Parameters<THREE.Material['onBeforeCompile']>[0]) {
   fadeNearCamera(shader);
   shader.vertexShader = 'attribute float particleOpacity; varying float vParticleOpacity;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvParticleOpacity = particleOpacity;');
   shader.fragmentShader = 'varying float vParticleOpacity;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= vParticleOpacity;\n#include <opaque_fragment>');
 }
 
-function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & { group: 'motes' | 'debris' | 'fireflies'; limit: number }) {
+function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & { group: keyof typeof AMBIENCE_LIMITS.desktop; limit: number }) {
   const capacity = AMBIENCE_LIMITS.desktop[group];
+  const winged = group === 'butterflies' || group === 'birds';
   const mesh = useRef<THREE.InstancedMesh>(null!), grass = useMemo(() => Array.from(columns.values()), [columns]);
   const allowed = useMemo(() => new Set(sources), [sources]);
   const profile = useMemo(() => sampleAmbience(frame), [frame]);
@@ -28,7 +30,7 @@ function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & {
     const dt = Math.min(delta, .05); data.elapsed += dt;
     data.amount += (profile[group] - data.amount) * (1 - Math.exp(-dt * 2));
     // Small gardens use fewer details; the fixed pool ceilings stay independent of letter count.
-    const count = grass.length ? Math.round(limit * data.amount * Math.min(1, Math.max(.15, grass.length / 2500))) : 0;
+    const count = grass.length ? Math.round(limit * data.amount * Math.min(1, Math.max(winged || group === 'fireflies' ? .35 : .15, grass.length / 2500))) : 0;
     for (let i = count; i < data.lastCount; i++) { data.particles[i] = null; data.opacities[i] = 0; }
     data.lastCount = count;
     mesh.current.count = count;
@@ -49,8 +51,9 @@ function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & {
           data.colour.set(frame.season === 'autumn' ? ['#b57d37', '#c0904e', '#9c6639'][seed % 3] : candidate.source.voxel.color);
         } else {
           const column = grass[seed % grass.length];
-          p = spawnAmbient(group === 'fireflies' ? 'firefly' : 'mote', i, cycle, [column.x, column.y + .6 + ((seed * .61803398875) % 1) * 1.5, column.z]);
-          data.colour.set(group === 'fireflies' ? '#d8ec91' : frame.season === 'winter' ? '#c7d3dd' : '#e6e1b3');
+          const kind = group === 'birds' ? 'bird' : group === 'butterflies' ? 'butterfly' : group === 'fireflies' ? 'firefly' : 'mote';
+          p = spawnAmbient(kind, i, cycle, [column.x, column.y + (group === 'birds' ? 2.5 : .6) + ((seed * .61803398875) % 1) * 1.5, column.z]);
+          data.colour.set(group === 'birds' ? '#45504b' : group === 'butterflies' ? ['#d4b276', '#c99f9c', '#a6b99d'][seed % 3] : group === 'fireflies' ? '#d8ec91' : frame.season === 'winter' ? '#c7d3dd' : '#e6e1b3');
         }
         data.particles[i] = p; data.ages[i] = initial ? ((i * .61803398875) % 1) * p.duration : 0;
         mesh.current.setColorAt(i, data.colour);
@@ -69,9 +72,12 @@ function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & {
     if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
     mesh.current.geometry.getAttribute('particleOpacity').needsUpdate = true;
   });
-  return <instancedMesh ref={mesh} args={[undefined, undefined, capacity]} raycast={() => {}} frustumCulled={false}>
-    <boxGeometry><instancedBufferAttribute attach="attributes-particleOpacity" args={[data.opacities, 1]} /></boxGeometry>
-    {group === 'fireflies' ? <meshBasicMaterial transparent depthWrite={false} toneMapped={false} onBeforeCompile={fadeParticles} /> : <meshStandardMaterial roughness={1} transparent depthWrite={false} onBeforeCompile={fadeParticles} />}
+  return <instancedMesh name={`ambience-${group}`} ref={mesh} args={[undefined, undefined, capacity]} raycast={() => {}} frustumCulled={false}>
+    {winged ? <bufferGeometry>
+      <bufferAttribute attach="attributes-position" args={[WINGS, 3]} />
+      <instancedBufferAttribute attach="attributes-particleOpacity" args={[data.opacities, 1]} />
+    </bufferGeometry> : <boxGeometry><instancedBufferAttribute attach="attributes-particleOpacity" args={[data.opacities, 1]} /></boxGeometry>}
+    {group === 'fireflies' || winged ? <meshBasicMaterial side={THREE.DoubleSide} transparent depthWrite={false} toneMapped={false} onBeforeCompile={fadeParticles} /> : <meshStandardMaterial roughness={1} transparent depthWrite={false} onBeforeCompile={fadeParticles} />}
   </instancedMesh>;
 }
 
@@ -86,5 +92,7 @@ export default function GardenAmbience(props: Props) {
     <AmbientPool {...props} group="motes" limit={limits.motes} />
     <AmbientPool {...props} group="debris" limit={limits.debris} />
     <AmbientPool {...props} group="fireflies" limit={limits.fireflies} />
+    <AmbientPool {...props} group="butterflies" limit={limits.butterflies} />
+    <AmbientPool {...props} group="birds" limit={limits.birds} />
   </> : null;
 }

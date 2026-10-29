@@ -28,7 +28,7 @@ test('all seasonal phases are bounded, calm and respect weather and feature swit
   assert.deepEqual(sampleAmbience(f), sampleAmbience({ ...f, period: 'day' }));
   const before = sampleAmbience({ ...f, solarAngle: -1e-6 }), after = sampleAmbience({ ...f, solarAngle: 1e-6 });
   assert.ok(Math.abs(before.motes - after.motes) < 1e-4);
-  assert.deepEqual(AMBIENCE_LIMITS, { desktop: { motes: 160, debris: 96, fireflies: 32 }, mobile: { motes: 56, debris: 32, fireflies: 8 } });
+  assert.deepEqual(AMBIENCE_LIMITS, { desktop: { motes: 160, debris: 96, fireflies: 64, butterflies: 12, birds: 8 }, mobile: { motes: 56, debris: 32, fireflies: 24, butterflies: 4, birds: 3 } });
 });
 
 test('only visible, appropriate foliage supplies petals and leaves without mutating trees', () => {
@@ -66,4 +66,35 @@ test('distant fireflies keep a small readable angular size within the existing p
     assert.ok(ambientSizeScale('mote', distance) <= 2.5);
   }
   assert.ok(ambientSizeScale('firefly', 2000) <= 12);
+});
+
+test('small birds and butterflies follow daylight, season and weather', () => {
+  assert.deepEqual(AMBIENCE_LIMITS, { desktop: { motes: 160, debris: 96, fireflies: 64, butterflies: 12, birds: 8 }, mobile: { motes: 56, debris: 32, fireflies: 24, butterflies: 4, birds: 3 } });
+  for (const season of ['neutral', 'spring', 'summer', 'autumn', 'winter', 'tropical'] as const) for (const time of ['dawn', 'day', 'dusk', 'night'] as const) {
+    const f = frame(season, time), p = sampleAmbience(f);
+    assert.equal(p.butterflies > 0, ['spring', 'summer', 'tropical'].includes(season) && time !== 'night');
+    assert.equal(p.birds > 0, !['neutral', 'winter'].includes(season) && time !== 'night');
+    for (const n of [p.motes, p.debris, p.fireflies, p.butterflies, p.birds]) assert.ok(Number.isFinite(n) && n >= 0 && n <= 1);
+    for (const off of [{ snow: true }, { enabled: false }, { ambience: false }, { rainIntensity: 1 }]) {
+      const q = sampleAmbience({ ...f, ...off }); assert.equal(q.butterflies, 0); assert.equal(q.birds, 0);
+    }
+  }
+});
+
+test('winged wildlife stays tiny and follows bounded seeded paths', () => {
+  for (const kind of ['butterfly', 'bird'] as const) {
+    const p = spawnAmbient(kind, 5, 2, [1, 3, 4]), before = JSON.stringify(p);
+    assert.deepEqual(p, spawnAmbient(kind, 5, 2, [1, 3, 4]));
+    const out: ParticlePose = { position: [0, 0, 0], rotation: [0, 0, 0], size: [0, 0, 0], opacity: 0, finished: false }, ref = out.position;
+    for (let age = 0; age < p.duration; age += .17) {
+      sampleAmbientParticle(p, age, out);
+      assert.ok([...out.position, ...out.rotation, ...out.size, out.opacity].every(Number.isFinite));
+      assert.equal(out.position, ref); assert.ok(out.position[1] >= 2.7 && out.position[1] <= 3.3);
+      assert.ok(Math.hypot(out.position[0] - 1, out.position[2] - 4) <= 1.5);
+      assert.equal(out.size[0], kind === 'bird' ? .10 : .07);
+    }
+    assert.equal(JSON.stringify(p), before);
+    sampleAmbientParticle(p, p.duration, out); assert.equal(out.finished, true); assert.equal(out.opacity, 0);
+    for (const distance of [2, 40, 80, 200, 2000]) assert.equal(ambientSizeScale(kind, distance), ambientSizeScale('firefly', distance));
+  }
 });

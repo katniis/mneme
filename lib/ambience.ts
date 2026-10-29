@@ -5,9 +5,9 @@ import { random, treeFamily, elementProgress, type Vec3, type Voxel } from './tr
 import type { TreeRecord } from './tree-removal.ts';
 import type { ParticlePose } from './atmosphere.ts';
 
-export const AMBIENCE_LIMITS = { desktop: { motes: 160, debris: 96, fireflies: 32 }, mobile: { motes: 56, debris: 32, fireflies: 8 } } as const;
-export type AmbienceKind = 'mote' | 'petal' | 'leaf' | 'firefly';
-export type AmbienceProfile = { motes: number; debris: number; fireflies: number; debrisKind: 'petal' | 'leaf' | null };
+export const AMBIENCE_LIMITS = { desktop: { motes: 160, debris: 96, fireflies: 64, butterflies: 12, birds: 8 }, mobile: { motes: 56, debris: 32, fireflies: 24, butterflies: 4, birds: 3 } } as const;
+export type AmbienceKind = 'mote' | 'petal' | 'leaf' | 'firefly' | 'butterfly' | 'bird';
+export type AmbienceProfile = { motes: number; debris: number; fireflies: number; butterflies: number; birds: number; debrisKind: 'petal' | 'leaf' | null };
 export type LeafSource = { tree: TreeRecord; voxel: Voxel };
 export type AmbientParticle = { kind: AmbienceKind; origin: Vec3; seed: number; duration: number };
 const SEASONS = { neutral: [.25, 0, .35], spring: [.7, .6, .4], summer: [1, 0, 1], autumn: [.3, 1, .25], winter: [.12, 0, 0], tropical: [.6, .35, .85] } as const;
@@ -15,7 +15,7 @@ const TIMES = [[.6, 1, .1], [1, .8, 0], [.35, .6, 1], [.1, .2, .8]] as const;
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 
 export function sampleAmbience(frame: EnvironmentFrame): AmbienceProfile {
-  const result: AmbienceProfile = { motes: 0, debris: 0, fireflies: 0, debrisKind: frame.season === 'spring' ? 'petal' : frame.season === 'autumn' || frame.season === 'tropical' ? 'leaf' : null };
+  const result: AmbienceProfile = { motes: 0, debris: 0, fireflies: 0, butterflies: 0, birds: 0, debrisKind: frame.season === 'spring' ? 'petal' : frame.season === 'autumn' || frame.season === 'tropical' ? 'leaf' : null };
   if (!frame.enabled || !frame.ambience || frame.snow) return result;
   const angle = ((frame.solarAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2), phase = angle / (Math.PI / 2);
   const index = frame.period === 'static' ? 1 : Math.floor(phase), next = (index + 1) % 4, t = frame.period === 'static' ? 0 : phase - index;
@@ -26,6 +26,9 @@ export function sampleAmbience(frame: EnvironmentFrame): AmbienceProfile {
     result[key] = season[i] * (base + (TIMES[3][i] - base) * night) * (key === 'fireflies' ? 1 - weather : 1 - .85 * weather);
   }
   result.fireflies *= clamp((.85 - frame.daylight) / .35);
+  const daytime = (frame.period === 'static' ? 1 : frame.daylight) * (1 - weather);
+  result.butterflies = ['spring', 'summer', 'tropical'].includes(frame.season) ? daytime : 0;
+  result.birds = frame.season !== 'neutral' && frame.season !== 'winter' ? daytime * .6 : 0;
   return result;
 }
 
@@ -59,13 +62,22 @@ export function sampleAmbientParticle(p: AmbientParticle, age: number, out: Part
   out.position[2] = p.origin[2] + t * .04 + (Math.cos(phase + t * .6) - Math.cos(phase)) * .3;
   out.position[1] = p.origin[1] + (debris ? -t * (.55 + (p.seed % 7) * .04) : (Math.sin(phase + t * .8) - Math.sin(phase)) * .12);
   out.rotation[0] = phase + t * (debris ? 1.1 : .15); out.rotation[1] = t * .5; out.rotation[2] = phase + t * .6;
+  const winged = p.kind === 'bird' || p.kind === 'butterfly';
+  if (winged) {
+    const speed = p.kind === 'bird' ? .55 : .9, radius = p.kind === 'bird' ? .65 : .35, angle = phase + t * speed;
+    out.position[0] = p.origin[0] + (Math.sin(angle) - Math.sin(phase)) * radius;
+    out.position[2] = p.origin[2] + (Math.cos(angle) - Math.cos(phase)) * radius;
+    out.position[1] = p.origin[1] + (Math.sin(phase + t * 2) - Math.sin(phase)) * .1;
+    out.rotation[0] = 0; out.rotation[1] = angle + Math.PI / 2; out.rotation[2] = Math.sin(t * speed) * .15;
+  }
   out.finished = t >= p.duration;
   const fade = clamp(t / .4) * clamp((p.duration - t) / .4), pulse = p.kind === 'firefly' ? .25 + .75 * Math.sin(phase + t * 1.6) ** 2 : p.kind === 'mote' ? .45 : .85;
   out.opacity = out.finished ? 0 : fade * pulse;
-  const size = p.kind === 'mote' ? .035 : p.kind === 'firefly' ? .055 : .13;
+  const size = p.kind === 'mote' ? .035 : p.kind === 'firefly' ? .055 : p.kind === 'bird' ? .10 : p.kind === 'butterfly' ? .07 : .13;
   out.size[0] = size; out.size[1] = debris ? .02 : size; out.size[2] = debris ? size * .55 : size;
+  if (winged) out.size[1] = size * (.2 + .8 * Math.sin(phase + t * (p.kind === 'bird' ? 5 : 14)));
 }
 
 export function ambientSizeScale(kind: AmbienceKind, distance: number): number {
-  return kind === 'firefly' ? Math.max(1, Math.min(12, distance / 25)) : Math.min(2.5, 1 + Math.max(0, distance) / 90);
+  return kind === 'firefly' || kind === 'bird' || kind === 'butterfly' ? Math.max(1, Math.min(12, distance / 25)) : Math.min(2.5, 1 + Math.max(0, distance) / 90);
 }
