@@ -18,9 +18,9 @@ function Switch({ label, checked, disabled, compact, onChange }: { label: string
   </label>;
 }
 
-function ChoiceGroup<T extends string>({ name, title, value, options, disabled, onChange, caption, control }: { name: string; title: string; value: T; options: readonly T[]; disabled: boolean; onChange: (value: T) => void; caption: string; control?: ReactNode }) {
+function ChoiceGroup<T extends string>({ name, title, value, options, disabled, disabledOptions, onChange, caption, control }: { name: string; title: string; value: T; options: readonly T[]; disabled: boolean; disabledOptions?: readonly T[]; onChange: (value: T) => void; caption: string; control?: ReactNode }) {
   const choice = (option: T) => <label key={option} className={styles.choice}>
-    <input type="radio" name={name} value={option} checked={value === option} disabled={disabled} onChange={() => onChange(option)} />
+    <input type="radio" name={name} value={option} checked={value === option} disabled={disabled || disabledOptions?.includes(option)} onChange={() => onChange(option)} />
     <span>{modeLabel(option)}</span>
   </label>;
   return <section className={styles.group} aria-labelledby={`${name}-title`}>
@@ -64,8 +64,10 @@ export default function EnvironmentPanel({ controller: c, sound }: { controller:
         control={<Switch label="Seasonal island" compact checked={c.prefs.seasons} disabled={!c.prefs.enabled} onChange={seasons => c.updatePrefs({ seasons })} />}
         caption={!c.prefs.enabled || !c.prefs.seasons ? 'Seasonal colours are off.' : c.prefs.seasonMode === 'local' ? c.locationActive ? `${modeLabel(c.frame.season)} colours, based on your location.` : 'Add a location to match the season.' : `${modeLabel(c.prefs.seasonMode)} colours, all year round.`} />
       <ChoiceGroup name="environment-weather" title="Weather" value={c.prefs.weatherMode} options={WEATHER_MODES} disabled={!available} onChange={weatherMode => c.updatePrefs({ weatherMode })}
+        disabledOptions={c.frame.season === 'winter' ? [] : ['snow']}
         caption={!available ? 'Atmosphere is off.' : c.prefs.weatherMode === 'local' ? c.frame.weatherStatus === 'fresh' ? 'Current conditions near you.' : c.frame.weatherStatus === 'needs-location' ? 'Add a location to match your weather.' : 'Weather unavailable. You can choose a setting above.' : 'Your chosen weather, whatever the forecast.'} />
       <Switch label="Rain & snow" checked={c.prefs.rain} disabled={!c.prefs.enabled} onChange={rain => c.updatePrefs({ rain })} />
+      {c.frame.season !== 'winter' && <p className={styles.caption}>Snow is available in winter.{c.prefs.weatherMode === 'snow' ? ' Your saved snow setting is paused; the weather stays clear.' : ''}</p>}
       <button className={styles.reset} type="button" onClick={() => c.updatePrefs({ timeMode: 'local', seasonMode: 'local', weatherMode: 'local' })}>Reset to automatic</button>
     </div>
     <div className={styles.sound}>

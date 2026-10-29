@@ -96,12 +96,14 @@ export function resolveEnvironment(now: number, deviceZone: string, p: Environme
     [clouds, rain] = { clear: [0, 0], 'light-rain': [.85, .35], 'heavy-rain': [1, 1], snow: [.9, 0] }[p.weatherMode];
     snow = p.weatherMode === 'snow';
   }
+  const season = p.enabled && p.seasons ? p.seasonMode === 'local' ? seasonFor(local.month, location?.latitude ?? null) : p.seasonMode : 'neutral';
+  if (snow && season !== 'winter') { snow = false; clouds = 0; rain = 0; }
   const channels = [p.weatherMode, ...(p.dayNight ? [p.timeMode] : []), ...(p.seasons ? [p.seasonMode] : [])];
   const manual = channels.some(mode => mode !== 'local'), localChannel = channels.includes('local');
   return {
     enabled: p.enabled, ambience: p.enabled && p.ambience, period: p.enabled && p.dayNight ? period : 'static',
     solarAngle: p.enabled && p.dayNight ? angle : Math.PI / 2, daylight: p.enabled && p.dayNight ? daylight : 1,
-    season: p.enabled && p.seasons ? p.seasonMode === 'local' ? seasonFor(local.month, location?.latitude ?? null) : p.seasonMode : 'neutral',
+    season,
     rainIntensity: p.enabled && p.rain ? rain : 0,
     cloudCover: working ? clouds : 0,
     snow: p.enabled && p.rain && snow,

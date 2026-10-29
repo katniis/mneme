@@ -48,7 +48,7 @@ test('rain requires fresh observation, allowed code and amount; snow is distinct
   for (const bad of [{ fetchedAt: noon - 1800001 }, { observedAt: noon - 1800001 }, { observedAt: noon + 300001 }, { fetchedAt: noon + 300001 }, { rainMm: 0 }, { code: 0 }]) {
     assert.equal(resolveEnvironment(noon, 'Asia/Manila', prefs, { ...weather, ...bad }).rainIntensity, 0);
   }
-  const snow = resolveEnvironment(noon, 'Asia/Manila', prefs, { ...weather, code: 73 });
+  const snow = resolveEnvironment(noon, 'Asia/Manila', { ...prefs, seasonMode: 'winter' }, { ...weather, code: 73 });
   assert.equal(snow.rainIntensity, 0);
   assert.equal(snow.snow, true);
 });
@@ -80,11 +80,11 @@ test('manual phases override local time and fresh provider daylight', () => {
   assert.equal(resolveEnvironment(noon + 43200000, 'Asia/Manila', { ...defaults, timeMode: 'day' }, null).period, 'day');
   assert.equal(resolveEnvironment(noon + 43200000, 'Asia/Manila', { ...defaults, timeMode: 'local' }, null).period, 'night');
 });
-test('manual weather and season are independent and need no location', () => {
-  const p = { ...defaults, timeMode: 'night' as const, seasonMode: 'tropical' as const, weatherMode: 'snow' as const };
+test('manual weather needs no location and snow requires winter', () => {
+  const p = { ...defaults, timeMode: 'night' as const, seasonMode: 'winter' as const, weatherMode: 'snow' as const };
   const frame = resolveEnvironment(noon, 'Asia/Manila', p, null);
-  assert.equal(frame.season, 'tropical'); assert.equal(frame.snow, true); assert.equal(frame.rainIntensity, 0); assert.equal(frame.source, 'manual');
-  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, seasons: false }, null).snow, true);
+  assert.equal(frame.season, 'winter'); assert.equal(frame.snow, true); assert.equal(frame.rainIntensity, 0); assert.equal(frame.source, 'manual');
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, seasons: false }, null).snow, false);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, rain: false }, null).snow, false);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, weatherMode: 'clear', seasonMode: 'winter' }, null).snow, false);
   for (const [weatherMode, clouds, rain] of [['clear', 0, 0], ['light-rain', .85, .35], ['heavy-rain', 1, 1]] as const) {
@@ -129,7 +129,7 @@ test('legacy cloudy becomes clear without losing manual choices or requesting we
 
 test('living details are independent of precipitation and all four effects can be off', () => {
   const f = (changes: Partial<typeof defaults>) => resolveEnvironment(noon, 'Asia/Manila', { ...defaults, ...changes }, null);
-  assert.equal(f({ ambience: false, weatherMode: 'snow' }).snow, true);
+  assert.equal(f({ ambience: false, seasonMode: 'winter', weatherMode: 'snow' }).snow, true);
   assert.equal(f({ rain: false, weatherMode: 'snow' }).snow, false);
   assert.equal(f({ enabled: false }).ambience, false);
   assert.equal(f({ ambience: false }).ambience, false);
@@ -138,4 +138,28 @@ test('living details are independent of precipitation and all four effects can b
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', off, weather).source, 'static');
   assert.equal(requiresWeather({ ...off, ambience: true }, 'Asia/Manila'), true);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', prefs, { ...weather, cloudCover: .7 }).cloudCover, .7);
+});
+
+test('snow follows resolved winter across saved choices, switches and hemispheres', () => {
+  for (const seasonMode of ['neutral', 'tropical', 'spring', 'summer', 'autumn', 'winter'] as const) {
+    const p = { ...defaults, seasonMode, weatherMode: 'snow' as const };
+    const before = JSON.stringify(p), f = resolveEnvironment(noon, 'Asia/Manila', p, null);
+    assert.equal(f.snow, seasonMode === 'winter');
+    assert.equal(JSON.stringify(p), before);
+    if (seasonMode !== 'winter') assert.deepEqual([f.rainIntensity, f.cloudCover], [0, 0]);
+    assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...prefs, seasonMode }, { ...weather, code: 73 }).snow, seasonMode === 'winter');
+  }
+  const winter = { ...prefs, seasonMode: 'winter' as const, weatherMode: 'snow' as const };
+  for (const off of [{ enabled: false }, { seasons: false }, { rain: false }])
+    assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...winter, ...off }, null).snow, false);
+  for (const bad of [{ fetchedAt: noon - 1800001 }, { observedAt: noon + 300001 }])
+    assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...winter, weatherMode: 'local' }, { ...weather, code: 73, ...bad }).snow, false);
+  const saved = readEnvironmentPreferences(JSON.stringify({ ...winter, seasonMode: 'autumn' }));
+  assert.equal(saved.weatherMode, 'snow'); assert.equal(resolveEnvironment(noon, 'Asia/Manila', saved, null).snow, false);
+  const july = Date.parse('2026-07-01T04:00:00Z');
+  for (const latitude of [-40, 40]) {
+    const p = { ...prefs, location: { ...location, latitude } };
+    const w = { ...weather, code: 73, fetchedAt: july, observedAt: july };
+    assert.equal(resolveEnvironment(july, 'Asia/Manila', p, w).snow, latitude === -40);
+  }
 });
