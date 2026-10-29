@@ -21,6 +21,14 @@ function blade(species: TreeSpecies): Tile[] {
 
 function motif(species: TreeSpecies, organ: Site['organ']): Tile[] {
   if (organ === 'blossom') {
+    if (species === 'Jacaranda') {
+      const tiles: Tile[] = [];
+      for (let i = 0; i < 6; i++) {
+        tiles.push({ position: [0, 0, i * .055], size: [.06, .06, .065] });
+        if (i < 5) for (const side of [-1, 1]) tiles.push({ position: [side * .045, .02, i * .055], size: [.06, .07, .065] });
+      }
+      return tiles;
+    }
     const tiles: Tile[] = [{ position: [0, 0, 0], size: [.07, .07, .07] }];
     for (let i = 0; i < 7; i++) {
       const a = i * Math.PI * 2 / 7;

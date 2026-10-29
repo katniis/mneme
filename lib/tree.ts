@@ -1,5 +1,6 @@
 import { random } from './trees/random.ts';
 import { buildBroadleafSkeleton } from './trees/broadleaf.ts';
+import { buildFloweringSkeleton } from './trees/flowering.ts';
 import { voxelizeTree } from './trees/voxel-builder.ts';
 import type { Vec3, Voxel } from './trees/types.ts';
 export { random } from './trees/random.ts';
@@ -262,6 +263,7 @@ const add = (a: Vec3, b: Vec3): Vec3 => a.map((n, i) => n + b[i]) as Vec3;
 export function generateTree(seed: number): Voxel[] {
   const species = treeFamily(seed);
   if (species === 'Oak' || species === 'Birch' || species === 'Maple') return voxelizeTree(buildBroadleafSkeleton(seed, species), seed, species);
+  if (species === 'Cherry Blossom' || species === 'Jacaranda') return voxelizeTree(buildFloweringSkeleton(seed, species), seed, species);
 	const rng = random(seed);
 	const family = ((seed % 8) + 8) % 8;
 	const profile = palettes[family];
