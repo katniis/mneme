@@ -4,6 +4,7 @@ import { searchPlaces } from '../../lib/weather';
 import { TIME_MODES, SEASON_MODES, WEATHER_MODES, type EnvironmentLocation } from '../../lib/environment';
 import type { EnvironmentController } from './useEnvironment';
 import type { AmbientAudioController } from './useAmbientAudio';
+import { SEASON_TRACKS } from '../../lib/seasonal-tracks';
 import styles from './EnvironmentPanel.module.css';
 
 function modeLabel(value: string) {
@@ -40,6 +41,7 @@ export default function EnvironmentPanel({ controller: c, sound }: { controller:
   const [status, setStatus] = useState('');
   const request = useRef<AbortController | null>(null);
   const available = c.prefs.enabled && (c.prefs.dayNight || c.prefs.seasons || c.prefs.rain || c.prefs.ambience);
+  const track = SEASON_TRACKS[c.frame.season];
   useEffect(() => { request.current?.abort(); setStatus(''); setPlaces([]); }, [available, c.prefs.location]);
   useEffect(() => () => request.current?.abort(), []);
   async function search(e: React.FormEvent) {
@@ -72,9 +74,10 @@ export default function EnvironmentPanel({ controller: c, sound }: { controller:
     </div>
     <div className={styles.sound}>
       <Switch label="Nature sounds" checked={sound.enabled} disabled={!sound.enabled && !sound.available} onChange={enabled => { void sound.setEnabled(enabled); }} />
-      {sound.enabled ? <label className={styles.volume}>Volume <output>{Math.round(sound.volume * 100)}%</output><input type="range" aria-label="Nature sound volume" min="0" max="100" step="1" value={Math.round(sound.volume * 100)} onChange={e => sound.setVolume(Number(e.target.value) / 100)} /></label> : <p className={styles.caption}>A little birdsong, breeze, and quiet night sounds.</p>}
+      {sound.enabled ? <label className={styles.volume}>Volume <output>{Math.round(sound.volume * 100)}%</output><input type="range" aria-label="Nature sound volume" min="0" max="100" step="1" value={Math.round(sound.volume * 100)} onChange={e => sound.setVolume(Number(e.target.value) / 100)} /></label> : <p className={styles.caption}>Seasonal music, birdsong, and quiet insect calls.</p>}
+      <p className={styles.attribution}><a href={track.sourceUrl} target="_blank" rel="noreferrer">{track.title}</a> by {track.artist} · <a href={track.licenseUrl} target="_blank" rel="noreferrer">CC BY 4.0</a></p>
       {sound.status && <p role="status">{sound.status}</p>}
-      {sound.enabled && !sound.active && sound.available && <button type="button" onClick={() => { void sound.resume(); }}>Resume sound</button>}
+      {sound.enabled && (!sound.active || sound.status.startsWith('Seasonal music')) && sound.available && <button type="button" onClick={() => { void sound.resume(); }}>Resume sound</button>}
     </div>
     <p className={styles.status}>Time zone · <strong>{c.zone.replaceAll('_', ' ')}</strong><br />{!available ? 'Turn on atmosphere to change your surroundings.' : !c.weatherNeeded ? 'Automatic weather updates are paused.' : c.frame.weatherStatus === 'fresh' ? 'Weather is up to date.' : 'Auto uses your clock. Add a location for seasons and weather.'}</p>
     <h3>Weather location</h3>

@@ -1,6 +1,7 @@
 import type { SoundscapeProfile, SoundEvent } from './soundscape.ts';
 
 export type SoundscapeEngine = {
+  setTrack(buffer: AudioBuffer, at: number): void;
   setProfile(profile: SoundscapeProfile, at: number): void;
   setVolume(volume: number, at: number, seconds: number): void;
   schedule(events: readonly SoundEvent[], windowStart: number): void;
@@ -15,23 +16,14 @@ function ramp(param: AudioParam, value: number, at: number, seconds: number) {
   else param.linearRampToValueAtTime(value, at + seconds);
 }
 
-export function createSoundscape(context: BaseAudioContext, noise: Float32Array): SoundscapeEngine {
+export function createSoundscape(context: BaseAudioContext): SoundscapeEngine {
   const nodes: AudioNode[] = [], sources: (AudioBufferSourceNode | OscillatorNode)[] = [];
   const gain = () => { const node = context.createGain(); nodes.push(node); node.gain.value = 0; return node; };
-  const filter = (type: BiquadFilterType, frequency: number) => { const node = context.createBiquadFilter(); node.type = type; node.frequency.value = frequency; node.Q.value = .5; nodes.push(node); return node; };
-  const master = gain(), wind = gain(), rain = gain(), birds = gain(), insects = gain();
+  const master = gain(), birds = gain(), insects = gain();
   const compressor = context.createDynamicsCompressor(); nodes.push(compressor);
   compressor.threshold.value = -18; compressor.knee.value = 12; compressor.ratio.value = 4; compressor.attack.value = .02; compressor.release.value = .3;
   master.connect(compressor); compressor.connect(context.destination);
-  for (const bus of [wind, rain, birds, insects]) bus.connect(master);
-  const buffer = context.createBuffer(1, noise.length, context.sampleRate); buffer.getChannelData(0).set(noise);
-  const breezeFilter = filter('lowpass', 500), windHighpass = filter('highpass', 60);
-  const rainHighpass = filter('highpass', 150), rainLowpass = filter('lowpass', 6500);
-  for (const [i, entry] of [[breezeFilter, windHighpass, wind], [rainHighpass, rainLowpass, rain]].entries()) {
-    const source = context.createBufferSource(); source.buffer = buffer; source.loop = true;
-    source.connect(entry[0]); entry[0].connect(entry[1]); entry[1].connect(entry[2]); source.start(0, i * 2);
-    sources.push(source); nodes.push(source);
-  }
+  birds.connect(master); insects.connect(master);
   const voices = Array.from({ length: 4 }, (_, i) => {
     const oscillator = context.createOscillator(), envelope = gain(), pan = context.createStereoPanner();
     oscillator.type = 'sine'; oscillator.frequency.value = i < 2 ? 2400 : 4200;
@@ -40,18 +32,52 @@ export function createSoundscape(context: BaseAudioContext, noise: Float32Array)
     return { oscillator, envelope, pan };
   });
   let initialized = false, disposed = false;
+  type Music = { source: AudioBufferSourceNode; gain: GainNode; start: number; generation: number };
+  const music = new Set<Music>();
+  let track: AudioBuffer | null = null, generation = 0;
+  const removeMusic = (entry: Music) => {
+    entry.source.onended = null; entry.source.stop(); entry.source.disconnect(); entry.gain.disconnect(); music.delete(entry);
+  };
+  const startMusic = (buffer: AudioBuffer, at: number) => {
+    const source = context.createBufferSource(), envelope = context.createGain();
+    const overlap = Math.min(4, buffer.duration / 2), end = at + buffer.duration;
+    source.buffer = buffer; source.connect(envelope); envelope.connect(master);
+    envelope.gain.setValueAtTime(0, at); envelope.gain.linearRampToValueAtTime(.35, at + overlap);
+    envelope.gain.setValueAtTime(.35, end - overlap); envelope.gain.linearRampToValueAtTime(0, end);
+    const entry: Music = { source, gain: envelope, start: at, generation };
+    music.add(entry);
+    source.onended = () => {
+      source.onended = null; source.disconnect(); envelope.disconnect(); music.delete(entry);
+      queueLoop();
+    };
+    source.start(at);
+  };
+  const queueLoop = () => {
+    if (disposed || !track || music.size >= 2) return;
+    const last = [...music].filter(e => e.generation === generation).sort((a, b) => b.start - a.start)[0];
+    if (last) startMusic(track, Math.max(context.currentTime, last.start + track.duration - Math.min(4, track.duration / 2)));
+  };
   const clearVoice = (voice: typeof voices[number], at: number) => {
     ramp(voice.envelope.gain, 0, at, .008);
     ramp(voice.oscillator.frequency, voice.oscillator.frequency.value, at, 0);
     ramp(voice.pan.pan, voice.pan.pan.value, at, 0);
   };
   return {
+    setTrack(buffer, at) {
+      if (disposed || !Number.isFinite(buffer.duration) || buffer.duration <= 0) return;
+      generation++; track = buffer;
+      const outgoing = [...music].filter(e => e.start <= at).sort((a, b) => b.start - a.start)[0];
+      for (const entry of music) if (entry !== outgoing) removeMusic(entry);
+      if (outgoing) {
+        ramp(outgoing.gain.gain, 0, at, Math.min(4, buffer.duration / 2));
+        outgoing.source.stop(at + Math.min(4, buffer.duration / 2));
+      }
+      startMusic(buffer, at); queueLoop();
+    },
     setProfile(profile, at) {
       if (disposed) return;
       const seconds = initialized ? 4 : 0; initialized = true;
-      ramp(wind.gain, profile.wind, at, seconds); ramp(rain.gain, profile.rain, at, seconds);
       ramp(birds.gain, profile.birds, at, seconds); ramp(insects.gain, profile.insects, at, seconds);
-      ramp(breezeFilter.frequency, profile.filterHz, at, seconds);
       voices.forEach((voice, i) => { if ((i < 2 ? profile.birds : profile.insects) === 0) clearVoice(voice, at); });
     },
     setVolume(volume, at, seconds) { if (!disposed) ramp(master.gain, .18 * Math.max(0, Math.min(1, volume)), at, seconds); },
@@ -70,6 +96,8 @@ export function createSoundscape(context: BaseAudioContext, noise: Float32Array)
     clearCalls(at) { if (!disposed) voices.forEach(voice => clearVoice(voice, at)); },
     dispose() {
       if (disposed) return; disposed = true;
+      track = null;
+      for (const entry of music) removeMusic(entry);
       for (const source of sources) source.stop();
       for (const node of nodes) node.disconnect();
     },

@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EnvironmentFrame } from '../../lib/environment';
-import { AUDIO_KEY, DEFAULT_VOLUME, makeNoise, readAudioSettings, soundEvents, soundscapeProfile } from '../../lib/soundscape';
+import { AUDIO_KEY, DEFAULT_VOLUME, readAudioSettings, soundEvents, soundscapeProfile } from '../../lib/soundscape';
 import { createSoundscape, type SoundscapeEngine } from '../../lib/ambient-audio';
+import { SEASON_TRACKS } from '../../lib/seasonal-tracks';
 
-type Session = { context: AudioContext; engine: SoundscapeEngine; timer?: number; pauseTimer?: number; suspending: Promise<void> | null; nextWindow: number };
+type Session = { context: AudioContext; engine: SoundscapeEngine; timer?: number; pauseTimer?: number; suspending: Promise<void> | null; nextWindow: number; trackSrc: string; loadingSrc?: string; request?: AbortController };
 const SEED = 1977;
 
 export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
@@ -15,8 +16,31 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
   const session = useRef<Session | null>(null), closing = useRef<Promise<void> | null>(null);
   const wanted = useRef(false), mounted = useRef(true), generation = useRef(0), lostCanvas = useRef<HTMLCanvasElement | null>(null);
   const canPlay = useCallback(() => latest.current.available && latest.current.frame.enabled && !document.hidden && !lostCanvas.current, []);
+  const loadTrack = useCallback(async (s: Session) => {
+    const src = SEASON_TRACKS[latest.current.frame.season].src;
+    if (s.loadingSrc === src && !s.request?.signal.aborted) return;
+    s.request?.abort(); s.loadingSrc = undefined;
+    if (s.trackSrc === src) return;
+    const request = new AbortController(); s.request = request; s.loadingSrc = src;
+    setStatus('');
+    try {
+      const response = await fetch(src, { signal: request.signal });
+      if (!response.ok) throw new Error('Music unavailable');
+      const bytes = await response.arrayBuffer();
+      if (request.signal.aborted) return;
+      const buffer = await s.context.decodeAudioData(bytes);
+      if (request.signal.aborted || session.current !== s || !mounted.current || !wanted.current || !canPlay() || s.context.state !== 'running') return;
+      s.engine.setTrack(buffer, s.context.currentTime); s.trackSrc = src;
+    } catch {
+      if (!request.signal.aborted && session.current === s && mounted.current && wanted.current && canPlay())
+        setStatus('Seasonal music is unavailable. Animal sounds are still playing.');
+    } finally {
+      if (s.request === request) { s.request = undefined; s.loadingSrc = undefined; }
+    }
+  }, [canPlay]);
   const clearTimers = useCallback((s: Session) => { clearInterval(s.timer); clearTimeout(s.pauseTimer); s.timer = undefined; s.pauseTimer = undefined; }, []);
   const closeSession = useCallback((s: Session) => {
+    s.request?.abort();
     clearTimers(s); s.context.onstatechange = null; s.engine.dispose();
     if (session.current === s) session.current = null;
     const pending = s.context.close().catch(() => {}); closing.current = pending;
@@ -26,6 +50,7 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
     const token = ++generation.current, s = session.current;
     if (mounted.current) { setActive(false); setStatus(reason); }
     if (!s) return;
+    s.request?.abort(); s.loadingSrc = undefined;
     clearTimers(s); s.engine.clearCalls(s.context.currentTime); s.engine.setVolume(0, s.context.currentTime, .25);
     s.pauseTimer = window.setTimeout(() => {
       if (session.current !== s || token !== generation.current) return;
@@ -48,7 +73,7 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
         if (typeof window.AudioContext !== 'function') { setStatus('Nature sounds are unavailable in this browser.'); return; }
         // The first context and resume call happen inside the enable gesture, before any await.
         const context = new AudioContext();
-        try { s = { context, engine: createSoundscape(context, makeNoise(SEED, context.sampleRate * 4)), suspending: null, nextWindow: 0 }; }
+        try { s = { context, engine: createSoundscape(context), suspending: null, nextWindow: 0, trackSrc: '' }; }
         catch (error) { void context.close().catch(() => {}); throw error; }
         session.current = s;
         const owned = s;
@@ -73,10 +98,11 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
         while (s.nextWindow <= ahead) { s.engine.schedule(soundEvents(latest.current.profile, SEED, s.nextWindow), s.nextWindow * 2); s.nextWindow++; }
       };
       tick(); s.timer = window.setInterval(tick, 250); setActive(true); setStatus('');
+      void loadTrack(s);
     } catch {
       if (mounted.current && token === generation.current && wanted.current) { setActive(false); setStatus('Sound paused. Tap to resume.'); }
     }
-  }, [canPlay, clearTimers]);
+  }, [canPlay, clearTimers, loadTrack]);
 
   const setEnabled = useCallback(async (next: boolean) => {
     wanted.current = next; setEnabledState(next);
@@ -91,6 +117,10 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
   }, [canPlay]);
 
   useEffect(() => { session.current?.engine.setProfile(profile, session.current.context.currentTime); }, [profile]);
+  useEffect(() => {
+    const s = session.current;
+    if (s && wanted.current && canPlay() && s.context.state === 'running') void loadTrack(s);
+  }, [frame.season, canPlay, loadTrack]);
   useEffect(() => {
     if (!wanted.current) return;
     if (canPlay()) void resume(); else pause(false, frame.enabled ? 'Sound paused while the garden is unavailable.' : 'Sound paused while atmosphere is off.');

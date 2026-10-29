@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { soundscapeProfile, soundEvents, makeNoise, readAudioSettings, AUDIO_KEY } from '../lib/soundscape.ts';
+import { soundscapeProfile, soundEvents, readAudioSettings, AUDIO_KEY } from '../lib/soundscape.ts';
 import { DEFAULT_ENVIRONMENT, resolveEnvironment, type Season, type TimeMode } from '../lib/environment.ts';
 const now = Date.parse('2026-10-29T04:00:00Z');
 const frame = (season: Season, timeMode: TimeMode) => resolveEnvironment(now, 'Asia/Manila', { ...DEFAULT_ENVIRONMENT, seasonMode: season, timeMode, weatherMode: 'clear' }, null);
@@ -8,11 +8,10 @@ const frame = (season: Season, timeMode: TimeMode) => resolveEnvironment(now, 'A
 test('sound mixes follow time and season while suppressing calls in winter and precipitation', () => {
   for (const season of ['neutral', 'spring', 'summer', 'autumn', 'winter', 'tropical'] as const) for (const time of ['dawn', 'day', 'dusk', 'night'] as const) {
     const f = frame(season, time), p = soundscapeProfile(f);
-    for (const gain of [p.wind, p.birds, p.insects, p.rain]) assert.ok(gain >= 0 && gain <= 1 && Number.isFinite(gain));
+    for (const gain of [p.birds, p.insects]) assert.ok(gain >= 0 && gain <= 1 && Number.isFinite(gain));
     if (season === 'winter' || time === 'night') assert.equal(p.birds, 0);
     for (const override of [{ rainIntensity: 1 }, { snow: true }, { enabled: false }]) {
       const muted = soundscapeProfile({ ...f, ...override }); assert.equal(muted.birds, 0); assert.equal(muted.insects, 0);
-      if (override.enabled === false) assert.deepEqual([muted.wind, muted.rain], [0, 0]);
     }
   }
   assert.equal(soundscapeProfile(frame('spring', 'dawn')).birds, 1);
@@ -20,14 +19,7 @@ test('sound mixes follow time and season while suppressing calls in winter and p
   assert.ok(soundscapeProfile(frame('summer', 'night')).insects > soundscapeProfile(frame('summer', 'day')).insects);
   const f = frame('autumn', 'dawn'); assert.deepEqual(soundscapeProfile(f), soundscapeProfile({ ...f, period: 'day' }));
   const a = soundscapeProfile({ ...f, solarAngle: -1e-6 }), b = soundscapeProfile({ ...f, solarAngle: 1e-6 });
-  assert.ok(Math.abs(a.wind - b.wind) < 1e-4);
-});
-
-test('original noise is repeatable, bounded, unbiased and independent of audio sample rate', () => {
-  const a = makeNoise(1977, 48000); assert.equal(a.length, 48000); assert.deepEqual(a, makeNoise(1977, 48000));
-  let sum = 0, squares = 0;
-  for (const value of a) { assert.ok(Number.isFinite(value) && Math.abs(value) <= 1); sum += value; squares += value * value; }
-  assert.ok(Math.abs(sum / a.length) < .03 && Math.sqrt(squares / a.length) > .1);
+  assert.ok(Math.abs(a.birds - b.birds) < 1e-4);
 });
 
 test('only a valid volume preference survives reload, never a saved enabled flag', () => {
@@ -37,7 +29,7 @@ test('only a valid volume preference survives reload, never a saved enabled flag
 });
 
 test('scheduled calls vary in sparse bounded windows without same-voice overlap', () => {
-  const p = { wind: .2, birds: 1, insects: 1, rain: 0, filterHz: 500 }, distinct = new Set<string>();
+  const p = { birds: 1, insects: 1 }, distinct = new Set<string>();
   for (let window = 0; window < 1000; window++) {
     const events = soundEvents(p, 1977, window); assert.deepEqual(events, soundEvents(p, 1977, window)); distinct.add(JSON.stringify(events));
     assert.ok(events.length <= 8 && events.filter(e => e.voice < 2).length <= 2 && events.filter(e => e.voice >= 2).length <= 6);

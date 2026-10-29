@@ -2,35 +2,25 @@ import type { EnvironmentFrame } from './environment.ts';
 import { random } from './tree.ts';
 
 export const AUDIO_KEY = 'mneme-audio-v1', DEFAULT_VOLUME = .3;
-export type SoundscapeProfile = { wind: number; birds: number; insects: number; rain: number; filterHz: number };
+export type SoundscapeProfile = { birds: number; insects: number };
 export type SoundEvent = { voice: 0 | 1 | 2 | 3; at: number; duration: number; fromHz: number; toHz: number; gain: number; pan: number };
-const TIMES = [[.25, 1, 0], [.35, .55, .05], [.25, .15, .75], [.2, 0, .65]] as const;
-const SEASONS = { neutral: [.65, .6, 1], spring: [1, .55, 1], summer: [.7, 1, 1], autumn: [.4, .3, 1.2], winter: [0, 0, 1.4], tropical: [.9, 1, 1] } as const;
+const TIMES = [[1, 0], [.55, .05], [.15, .75], [0, .65]] as const;
+const SEASONS = { neutral: [.65, .6], spring: [1, .55], summer: [.7, 1], autumn: [.4, .3], winter: [0, 0], tropical: [.9, 1] } as const;
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 
 export function soundscapeProfile(frame: Pick<EnvironmentFrame, 'enabled' | 'period' | 'solarAngle' | 'daylight' | 'season' | 'rainIntensity' | 'cloudCover' | 'snow'>): SoundscapeProfile {
-  const result: SoundscapeProfile = { wind: 0, birds: 0, insects: 0, rain: 0, filterHz: frame.season === 'winter' ? 330 : 500 };
+  const result: SoundscapeProfile = { birds: 0, insects: 0 };
   if (!frame.enabled) return result;
   const phase = (((frame.solarAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 2);
   const index = frame.period === 'static' ? 1 : Math.floor(phase), t = frame.period === 'static' ? 0 : phase - index, next = (index + 1) % 4;
   const mix = t * t * (3 - 2 * t), darkness = frame.period === 'static' ? 0 : clamp(1 - frame.daylight * 2), night = darkness * darkness * (3 - 2 * darkness);
-  for (const [i, key] of (['wind', 'birds', 'insects'] as const).entries()) {
+  for (const [i, key] of (['birds', 'insects'] as const).entries()) {
     const base = TIMES[index][i] + (TIMES[next][i] - TIMES[index][i]) * mix;
     result[key] = base + (TIMES[3][i] - base) * night;
   }
   const season = SEASONS[frame.season];
-  result.wind = clamp(result.wind * season[2] + frame.cloudCover * .15 + frame.rainIntensity * .25);
   result.birds *= season[0] * (frame.snow ? 0 : 1 - frame.rainIntensity);
   result.insects *= season[1] * (frame.snow ? 0 : 1 - frame.rainIntensity);
-  if (frame.snow) result.wind = Math.max(.35, result.wind);
-  result.rain = frame.rainIntensity;
-  result.filterHz = Math.max(220, result.filterHz - frame.cloudCover * 150);
-  return result;
-}
-
-export function makeNoise(seed: number, samples: number): Float32Array {
-  const rng = random(seed), result = new Float32Array(samples);
-  for (let i = 0; i < samples; i++) result[i] = rng() * 2 - 1;
   return result;
 }
 
