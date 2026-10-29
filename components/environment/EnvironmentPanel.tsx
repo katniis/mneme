@@ -1,18 +1,44 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { searchPlaces } from '../../lib/weather';
-import { TIME_MODES, SEASON_MODES, WEATHER_MODES, type EnvironmentLocation, type TimeMode, type SeasonMode, type WeatherMode } from '../../lib/environment';
+import { TIME_MODES, SEASON_MODES, WEATHER_MODES, type EnvironmentLocation } from '../../lib/environment';
 import type { EnvironmentController } from './useEnvironment';
 import styles from './EnvironmentPanel.module.css';
+
+function modeLabel(value: string) {
+  return value === 'local' ? 'Auto' : value === 'neutral' ? 'Classic' : value.charAt(0).toUpperCase() + value.slice(1).replaceAll('-', ' ');
+}
+
+function Switch({ label, checked, disabled, compact, onChange }: { label: string; checked: boolean; disabled?: boolean; compact?: boolean; onChange: (checked: boolean) => void }) {
+  return <label className={styles.switch}>
+    <span className={compact ? styles.srOnly : undefined}>{label}</span>
+    <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />
+    <span className={styles.track} aria-hidden="true" />
+  </label>;
+}
+
+function ChoiceGroup<T extends string>({ name, title, value, options, disabled, onChange, caption, control }: { name: string; title: string; value: T; options: readonly T[]; disabled: boolean; onChange: (value: T) => void; caption: string; control?: ReactNode }) {
+  const choice = (option: T) => <label key={option} className={styles.choice}>
+    <input type="radio" name={name} value={option} checked={value === option} disabled={disabled} onChange={() => onChange(option)} />
+    <span>{modeLabel(option)}</span>
+  </label>;
+  return <section className={styles.group} aria-labelledby={`${name}-title`}>
+    <div className={styles.groupHeading}>
+      <h3 id={`${name}-title`}>{title}</h3>
+      {options.filter(option => option === 'local').map(choice)}
+      {control}
+    </div>
+    <div className={`${styles.options} ${name === 'environment-time' ? styles.timeOptions : name === 'environment-weather' ? styles.weatherOptions : ''}`}>{options.filter(option => option !== 'local').map(choice)}</div>
+    <p className={styles.caption}>{caption}</p>
+  </section>;
+}
 
 export default function EnvironmentPanel({ controller: c }: { controller: EnvironmentController }) {
   const [query, setQuery] = useState('');
   const [places, setPlaces] = useState<EnvironmentLocation[]>([]);
   const [status, setStatus] = useState('');
   const request = useRef<AbortController | null>(null);
-  const available = c.prefs.enabled && (c.prefs.dayNight || c.prefs.seasons || c.prefs.rain);
-  const label = (value: string) => value === 'local' ? 'Follow local' : value === 'neutral' ? 'Original' : value.charAt(0).toUpperCase() + value.slice(1).replaceAll('-', ' ');
-  const daylightSource = c.prefs.timeMode !== 'local' ? 'manual' : c.frame.weatherStatus === 'fresh' && c.weather?.timeZone === c.zone ? 'local solar data' : 'local clock';
+  const available = c.prefs.enabled && (c.prefs.dayNight || c.prefs.seasons || c.prefs.rain || c.prefs.ambience);
   useEffect(() => { request.current?.abort(); setStatus(''); setPlaces([]); }, [available, c.prefs.location]);
   useEffect(() => () => request.current?.abort(), []);
   async function search(e: React.FormEvent) {
@@ -25,26 +51,23 @@ export default function EnvironmentPanel({ controller: c }: { controller: Enviro
     } catch { if (!pending.signal.aborted) setStatus('City search is unavailable. Try again later.'); }
   }
   return <div className={styles.panel}>
-    <h2 id="panel-title">Your local world.</h2>
-    <p>Follow your local world, or choose the surroundings you want.</p>
-    <label className={styles.master}><input type="checkbox" checked={c.prefs.enabled} onChange={e => c.updatePrefs({ enabled: e.target.checked })} />Environment effects</label>
-    <fieldset disabled={!c.prefs.enabled} className={styles.features}>
-      <legend>Choose your surroundings</legend>
-      {(['dayNight', 'seasons', 'rain'] as const).map((key, i) => <label key={key}><input type="checkbox" checked={c.prefs[key]} onChange={e => c.updatePrefs({ [key]: e.target.checked })} />{['Day and night', 'Seasonal island', 'Rain and snow'][i]}</label>)}
-    </fieldset>
+    <h2 id="panel-title">Set the mood.</h2>
+    <p>Choose the light, season, and weather. Auto keeps them in tune with your world.</p>
+    <div className={styles.master}><Switch label="Atmosphere" checked={c.prefs.enabled} onChange={enabled => c.updatePrefs({ enabled })} /></div>
+    <Switch label="Living details" checked={c.prefs.ambience} disabled={!c.prefs.enabled} onChange={ambience => c.updatePrefs({ ambience })} />
     <div className={styles.choices}>
-      <label htmlFor="environment-time">Time of day</label>
-      <select id="environment-time" disabled={!c.prefs.enabled || !c.prefs.dayNight} value={c.prefs.timeMode} onChange={e => c.updatePrefs({ timeMode: e.target.value as TimeMode })}>{TIME_MODES.map(value => <option key={value} value={value}>{label(value)}</option>)}</select>
-      <small>{!c.prefs.enabled || !c.prefs.dayNight ? 'Day and night is off.' : `${label(c.frame.period)} · ${daylightSource}`}</small>
-      <label htmlFor="environment-season">Island season</label>
-      <select id="environment-season" disabled={!c.prefs.enabled || !c.prefs.seasons} value={c.prefs.seasonMode} onChange={e => c.updatePrefs({ seasonMode: e.target.value as SeasonMode })}>{SEASON_MODES.map(value => <option key={value} value={value}>{label(value)}</option>)}</select>
-      <small>{!c.prefs.enabled || !c.prefs.seasons ? 'Seasonal island is off.' : `${label(c.frame.season)} · ${c.prefs.seasonMode === 'local' ? c.locationActive ? 'local calendar and latitude' : 'choose a location for local seasons' : 'manual'}`}</small>
-      <label htmlFor="environment-weather">Weather</label>
-      <select id="environment-weather" disabled={!available} value={c.prefs.weatherMode} onChange={e => c.updatePrefs({ weatherMode: e.target.value as WeatherMode })}>{WEATHER_MODES.map(value => <option key={value} value={value}>{label(value)}</option>)}</select>
-      <small>{!available ? 'Environment effects are off.' : c.prefs.weatherMode === 'local' ? `Local weather · ${c.frame.weatherStatus === 'fresh' ? 'current conditions' : c.frame.weatherStatus === 'needs-location' ? 'choose a location' : 'unavailable or out of date'}` : `${label(c.prefs.weatherMode)} · manual`}{available && !c.prefs.rain ? ' · rain and snow hidden' : ''}</small>
-      <button type="button" onClick={() => c.updatePrefs({ timeMode: 'local', seasonMode: 'local', weatherMode: 'local' })}>Follow local for everything</button>
+      <ChoiceGroup name="environment-time" title="Time of day" value={c.prefs.timeMode} options={TIME_MODES} disabled={!c.prefs.enabled || !c.prefs.dayNight} onChange={timeMode => c.updatePrefs({ timeMode })}
+        control={<Switch label="Day and night" compact checked={c.prefs.dayNight} disabled={!c.prefs.enabled} onChange={dayNight => c.updatePrefs({ dayNight })} />}
+        caption={!c.prefs.enabled || !c.prefs.dayNight ? 'Day and night is off.' : c.prefs.timeMode === 'local' ? `${modeLabel(c.frame.period)} right now, using your time zone.` : `Keep the garden at ${c.prefs.timeMode}.`} />
+      <ChoiceGroup name="environment-season" title="Season" value={c.prefs.seasonMode} options={SEASON_MODES} disabled={!c.prefs.enabled || !c.prefs.seasons} onChange={seasonMode => c.updatePrefs({ seasonMode })}
+        control={<Switch label="Seasonal island" compact checked={c.prefs.seasons} disabled={!c.prefs.enabled} onChange={seasons => c.updatePrefs({ seasons })} />}
+        caption={!c.prefs.enabled || !c.prefs.seasons ? 'Seasonal colours are off.' : c.prefs.seasonMode === 'local' ? c.locationActive ? `${modeLabel(c.frame.season)} colours, based on your location.` : 'Add a location to match the season.' : `${modeLabel(c.prefs.seasonMode)} colours, all year round.`} />
+      <ChoiceGroup name="environment-weather" title="Weather" value={c.prefs.weatherMode} options={WEATHER_MODES} disabled={!available} onChange={weatherMode => c.updatePrefs({ weatherMode })}
+        caption={!available ? 'Atmosphere is off.' : c.prefs.weatherMode === 'local' ? c.frame.weatherStatus === 'fresh' ? 'Current conditions near you.' : c.frame.weatherStatus === 'needs-location' ? 'Add a location to match your weather.' : 'Weather unavailable. You can choose a setting above.' : 'Your chosen weather, whatever the forecast.'} />
+      <Switch label="Rain & snow" checked={c.prefs.rain} disabled={!c.prefs.enabled} onChange={rain => c.updatePrefs({ rain })} />
+      <button className={styles.reset} type="button" onClick={() => c.updatePrefs({ timeMode: 'local', seasonMode: 'local', weatherMode: 'local' })}>Reset to automatic</button>
     </div>
-    <p className={styles.status}>Your clock: <strong>{c.zone}</strong><br />{!available ? 'Environment effects are off.' : !c.weatherNeeded ? 'Local weather updates are paused for your manual choices.' : c.frame.weatherStatus === 'fresh' ? 'Using local weather data where requested.' : 'Local daylight uses an approximate 06:00–18:00 schedule when solar data is unavailable.'}</p>
+    <p className={styles.status}>Time zone · <strong>{c.zone.replaceAll('_', ' ')}</strong><br />{!available ? 'Turn on atmosphere to change your surroundings.' : !c.weatherNeeded ? 'Automatic weather updates are paused.' : c.frame.weatherStatus === 'fresh' ? 'Weather is up to date.' : 'Auto uses your clock. Add a location for seasons and weather.'}</p>
     <h3>Weather location</h3>
     <p>Your approximate location is sent to Open-Meteo for local weather. Your letters stay in this browser.</p>
     <button type="button" disabled={!available || c.locationStatus.startsWith('Finding')} onClick={c.useMyLocation}>Use my location</button>

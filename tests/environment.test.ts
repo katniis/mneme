@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_ENVIRONMENT as defaults, localDateParts, readEnvironmentPreferences, resolveEnvironment, requiresWeather, seasonFor, terrainColour, type WeatherSnapshot } from '../lib/environment.ts';
+import { DEFAULT_ENVIRONMENT as defaults, WEATHER_MODES, localDateParts, readEnvironmentPreferences, resolveEnvironment, requiresWeather, seasonFor, terrainColour, type WeatherSnapshot } from '../lib/environment.ts';
 
 const noon = Date.parse('2026-10-28T04:00:00Z');
 const location = { name: 'Manila', latitude: 14.6, longitude: 120.98, timeZone: 'Asia/Manila', source: 'city' as const, deviceZoneAtSelection: 'Asia/Manila' };
@@ -87,7 +87,7 @@ test('manual weather and season are independent and need no location', () => {
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, seasons: false }, null).snow, true);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, rain: false }, null).snow, false);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...p, weatherMode: 'clear', seasonMode: 'winter' }, null).snow, false);
-  for (const [weatherMode, clouds, rain] of [['clear', 0, 0], ['cloudy', .7, 0], ['light-rain', .85, .35], ['heavy-rain', 1, 1]] as const) {
+  for (const [weatherMode, clouds, rain] of [['clear', 0, 0], ['light-rain', .85, .35], ['heavy-rain', 1, 1]] as const) {
     const f = resolveEnvironment(noon, 'Asia/Manila', { ...p, weatherMode }, null);
     assert.equal(f.cloudCover, clouds); assert.equal(f.rainIntensity, rain);
   }
@@ -97,7 +97,7 @@ test('manual weather and season are independent and need no location', () => {
 test('v1 preferences migrate without losing choices and unknown mode fields fall back independently', () => {
   const legacy = { version: 1, enabled: true, dayNight: false, seasons: true, rain: false, location };
   const migrated = readEnvironmentPreferences(JSON.stringify(legacy));
-  assert.equal(migrated.version, 2); assert.equal(migrated.dayNight, false); assert.equal(migrated.rain, false);
+  assert.equal(migrated.version, 3); assert.equal(migrated.dayNight, false); assert.equal(migrated.rain, false);
   assert.deepEqual(migrated.location, location); assert.equal(migrated.timeMode, 'local'); assert.equal(migrated.weatherMode, 'local');
   const raw = JSON.stringify({ ...migrated, timeMode: 'broken', seasonMode: 'winter', weatherMode: 'snow' });
   const p = readEnvironmentPreferences(raw); assert.equal(p.timeMode, 'local'); assert.equal(p.seasonMode, 'winter'); assert.equal(p.weatherMode, 'snow');
@@ -111,7 +111,31 @@ test('weather demand follows active local consumers, with no requests for calend
   assert.equal(requiresWeather({ ...manual, timeMode: 'local' }, 'UTC'), false);
   assert.equal(requiresWeather({ ...manual, seasonMode: 'local' }, 'Asia/Manila'), false);
   assert.equal(requiresWeather({ ...prefs, enabled: false }, 'Asia/Manila'), false);
-  assert.equal(requiresWeather({ ...prefs, dayNight: false, seasons: false, rain: false }, 'Asia/Manila'), false);
+  assert.equal(requiresWeather({ ...prefs, dayNight: false, seasons: false, rain: false, ambience: false }, 'Asia/Manila'), false);
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', manual, weather).weatherStatus, 'off');
   assert.equal(resolveEnvironment(noon, 'Asia/Manila', { ...manual, timeMode: 'local' }, weather).source, 'mixed');
+});
+
+test('legacy cloudy becomes clear without losing manual choices or requesting weather', () => {
+  const p = readEnvironmentPreferences(JSON.stringify({ ...prefs, version: 2, weatherMode: 'cloudy', timeMode: 'night', seasonMode: 'winter' }));
+  assert.equal(p.version, 3); assert.equal(p.ambience, true); assert.equal(p.weatherMode, 'clear');
+  assert.equal(p.timeMode, 'night'); assert.equal(p.seasonMode, 'winter'); assert.deepEqual(p.location, location);
+  assert.equal(requiresWeather(p, 'Asia/Manila'), false);
+  assert.deepEqual(WEATHER_MODES, ['local', 'clear', 'light-rain', 'heavy-rain', 'snow']);
+  assert.equal(readEnvironmentPreferences(JSON.stringify({ ...p, ambience: false })).ambience, false);
+  const malformed = readEnvironmentPreferences(JSON.stringify({ ...p, ambience: 'broken' }));
+  assert.equal(malformed.ambience, true); assert.equal(malformed.timeMode, 'night');
+});
+
+test('living details are independent of precipitation and all four effects can be off', () => {
+  const f = (changes: Partial<typeof defaults>) => resolveEnvironment(noon, 'Asia/Manila', { ...defaults, ...changes }, null);
+  assert.equal(f({ ambience: false, weatherMode: 'snow' }).snow, true);
+  assert.equal(f({ rain: false, weatherMode: 'snow' }).snow, false);
+  assert.equal(f({ enabled: false }).ambience, false);
+  assert.equal(f({ ambience: false }).ambience, false);
+  const off = { ...prefs, dayNight: false, seasons: false, rain: false, ambience: false };
+  assert.equal(requiresWeather(off, 'Asia/Manila'), false);
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', off, weather).source, 'static');
+  assert.equal(requiresWeather({ ...off, ambience: true }, 'Asia/Manila'), true);
+  assert.equal(resolveEnvironment(noon, 'Asia/Manila', prefs, { ...weather, cloudCover: .7 }).cloudCover, .7);
 });
