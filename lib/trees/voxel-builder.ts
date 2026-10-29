@@ -17,8 +17,10 @@ function rasterize(nodes: readonly SkeletonNode[], radii: readonly number[]) {
       const t = s / steps, p = from.map((v, axis) => v + (to[axis] - v) * t) as Vec3;
       const r = (radii[node.parent] ?? radii[n]) * (1 - t) + radii[n] * t;
       const gx = Math.round(p[0] / CELL), gy = Math.round((p[1] - CELL / 2) / CELL), gz = Math.round(p[2] / CELL), reach = Math.ceil((r + .045) / CELL);
+      const centerKey = key(gx, Math.max(0, gy), gz);
+      if (!cells.has(centerKey)) cells.set(centerKey, { x: gx, y: Math.max(0, gy), z: gz, node: n });
       for (let x = gx - reach; x <= gx + reach; x++) for (let y = Math.max(0, gy - reach); y <= gy + reach; y++) for (let z = gz - reach; z <= gz + reach; z++) {
-        if ((x * CELL - p[0]) ** 2 + (y * CELL + CELL / 2 - p[1]) ** 2 + (z * CELL - p[2]) ** 2 > (r + .045) ** 2) continue;
+        if ((x * CELL - p[0]) ** 2 + (y * CELL + CELL / 2 - p[1]) ** 2 + (z * CELL - p[2]) ** 2 > (r + .03) ** 2) continue;
         const k = key(x, y, z);
         if (!cells.has(k)) cells.set(k, { x, y, z, node: n });
       }
@@ -31,7 +33,7 @@ export function voxelizeTree(skeleton: TreeSkeleton, seed: number, species: Tree
   if (!skeleton.nodes.length) throw new Error('Tree skeleton requires a root');
   let count = Math.min(skeleton.nodes.length, TREE_LIMITS.nodes), cells: Map<string, Cell>;
   do {
-    const radii = skeleton.nodes.slice(0, count).map(n => Math.max(.022, n.radius));
+    const radii = skeleton.nodes.slice(0, count).map(n => Math.max(.012, n.radius));
     const sums = new Float64Array(count);
     for (let i = count - 1; i >= 0; i--) {
       radii[i] = Math.max(radii[i], sums[i] ** (1 / 2.3));
@@ -77,3 +79,4 @@ export function voxelizeTree(skeleton: TreeSkeleton, seed: number, species: Tree
   for (const v of voxels) { v.start /= duration; v.end /= duration; }
   return voxels;
 }
+

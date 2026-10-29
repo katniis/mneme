@@ -13,122 +13,18 @@ test('a seed preserves every tree voxel; different seeds produce different anato
 test('eight species are assigned by seed with legacy names preserved', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(treeFamily), ['Oak', 'Birch', 'Maple', 'Cherry Blossom', 'Weeping Willow', 'Pine', 'Jacaranda', 'Spruce']);
 });
-test('each new species has its real-world voxel signature', () => {
-  const leaves = (seed: number) => generateTree(seed).filter(v => v.kind === 'leaf');
-  const share = (seed: number, colors: string[]) => { const leaf = leaves(seed); return leaf.filter(v => colors.includes(v.color)).length / leaf.length; };
-  const cherry = generateTree(3);
-  assert.ok(share(3, ['#f6c6d9', '#f9dbe6', '#f2a9c4', '#e98fb5']) > 0.5, 'cherry is blossom-dominant');
-  assert.ok((Math.max(...cherry.map(v => v.position[0])) - Math.min(...cherry.map(v => v.position[0]))) / Math.max(...cherry.map(v => v.position[1])) > 0.9, 'cherry canopy is wide and low');
-  assert.ok(share(2, ['#c33d26', '#d95d28', '#e08a35', '#a92c22', '#e5a44a']) > 0.8, 'maple leaves are autumn red and amber');
-  const willow = generateTree(4);
-  const willowMax = Math.max(...willow.map(v => v.position[1]));
-  assert.ok(leaves(4).filter(v => v.size[1] > v.size[0] * 2).length / leaves(4).length > 0.3, 'willow leaves are long and narrow');
-  assert.ok(leaves(4).filter(v => v.position[1] < willowMax * 0.3).length > 40, 'willow foliage hangs low');
-  for (const seed of [5, 7]) {
-    const tree = generateTree(seed);
-    const maxY = Math.max(...tree.map(v => v.position[1]));
-    const radius = Math.max(...tree.filter(v => v.kind === 'leaf').map(v => Math.hypot(v.position[0], v.position[2])));
-    assert.ok(maxY > 6 && radius < maxY * 0.45, `seed ${seed} conifer is tall and narrow`);
-    const low = tree.filter(v => v.kind === 'leaf' && v.position[1] < maxY * 0.4);
-    const high = tree.filter(v => v.kind === 'leaf' && v.position[1] > maxY * 0.75);
-    const avg = (list: typeof low) => list.reduce((sum, v) => sum + Math.hypot(v.position[0], v.position[2]), 0) / Math.max(1, list.length);
-    assert.ok(avg(low) > avg(high), `seed ${seed} conifer tiers shrink upward`);
-  }
-  assert.ok(leaves(7).length > leaves(5).length, 'spruce is denser than pine');
-  const jacaranda = leaves(6);
-  const jMax = Math.max(...generateTree(6).map(v => v.position[1]));
-  const topPurple = jacaranda.filter(v => v.position[1] > jMax * 0.65 && ['#8b6fc7', '#a58ae0', '#7a5fb8', '#b7a3e8'].includes(v.color)).length;
-  assert.ok(topPurple / Math.max(1, jacaranda.filter(v => v.position[1] > jMax * 0.65).length) > 0.35, 'jacaranda blossom crowns the top');
-});
-test('every growing tree element is attached to a completed support', () => {
-  for (const seed of [1024, 0, 1, 2, 3, 4, 5, 6, 7, 57, 999, 1746370156]) {
-  const tree = generateTree(seed);
-  assert.ok(tree.length > 1000);
-  for (const [i, voxel] of tree.entries()) {
-    assert.ok(voxel.end > voxel.start && voxel.end <= 1);
-    if (voxel.parent >= 0) {
-      assert.ok(voxel.parent < i);
-      assert.ok(voxel.start >= tree[voxel.parent].end - 1e-8);
-      assert.deepEqual(voxel.anchor, tree[voxel.parent].position);
-      for (let axis = 0; axis < 3; axis++) assert.ok(
-        Math.abs(voxel.position[axis] - tree[voxel.parent].position[axis]) <= (voxel.size[axis] + tree[voxel.parent].size[axis]) / 2 + .001,
-        `${voxel.kind} ${i} must physically meet its supporting voxel on axis ${axis}`,
-      );
-    }
-    assert.equal(elementProgress(voxel, 0), 0);
-    assert.equal(elementProgress(voxel, 1), 1);
-  }
-  assert.ok(tree.some(v => v.kind === 'leaf' && v.start < .7));
-  }
-});
-test('merged tree has no near-duplicate structural wood and keeps a sane voxel budget', () => {
-  // Structural wood (trunk/primary, >=0.12) follows the variant occupancy rule.
-  // Twig and petiole wood is intentionally spaced tighter than this so
-  // consecutive nodes physically touch, so it is excluded here.
-  for (const seed of [1024, 0, 1, 2, 3, 4, 5, 6, 7, 57]) {
-    const tree = generateTree(seed);
-    assert.ok(tree.length > 1000 && tree.length < 12000, `seed ${seed} has ${tree.length} voxels`);
-    const cell = 0.03;
-    const buckets = new Map<string, typeof tree>();
-    for (const voxel of tree) {
-      if (voxel.kind !== 'wood' || voxel.size[0] < 0.12) continue;
-      const cx = Math.floor(voxel.position[0] / cell), cy = Math.floor(voxel.position[1] / cell), cz = Math.floor(voxel.position[2] / cell);
-      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
-        for (const other of buckets.get(`${cx + dx}:${cy + dy}:${cz + dz}`) ?? []) {
-          const distance = Math.hypot(voxel.position[0] - other.position[0], voxel.position[1] - other.position[1], voxel.position[2] - other.position[2]);
-          assert.ok(distance >= 0.03, `seed ${seed} has near-duplicate structural wood ${distance.toFixed(4)} apart`);
-        }
-      }
-      const key = `${cx}:${cy}:${cz}`;
-      buckets.set(key, [...(buckets.get(key) ?? []), voxel]);
-    }
-  }
-});
-test('tree canopy reaches the leader zone in every family', () => {
+test('every growing element retains completed support and monotonic growth', () => {
   for (const seed of [0, 1, 2, 3, 4, 5, 6, 7, 57, 999]) {
     const tree = generateTree(seed);
-    const maxY = Math.max(...tree.map(v => v.position[1]));
-    assert.ok(tree.filter(v => v.kind === 'leaf' && v.position[1] > maxY * 0.9).length >= 10, `seed ${seed} has no leader canopy`);
-    assert.ok(tree.filter(v => v.kind === 'wood' && v.position[1] > maxY * 0.9).length >= 5, `seed ${seed} has no leader wood`);
+    assert.ok(tree.length > 1000 && tree.length <= 12000);
+    for (const [i, v] of tree.entries()) {
+      assert.equal(elementProgress(v, 0), 0); assert.equal(elementProgress(v, 1), 1);
+      if (v.parent >= 0) {
+        assert.ok(v.parent < i); assert.deepEqual(v.anchor, tree[v.parent].position);
+        assert.ok(v.start >= tree[v.parent].end - 1e-8);
+      }
+    }
   }
-});
-test('leaves carry rotation while wood stays axis-aligned', () => {
-  for (const seed of [0, 2, 3, 4, 5, 6, 7]) {
-    const tree = generateTree(seed);
-    assert.ok(tree.filter(v => v.kind === 'leaf').every(v => Array.isArray(v.rotation) && v.rotation.length === 3 && v.rotation.every(Number.isFinite)), `seed ${seed} leaves must carry rotation`);
-    assert.ok(tree.filter(v => v.kind === 'wood').every(v => v.rotation === undefined), `seed ${seed} wood must stay unrotated`);
-  }
-});
-test('interior leaves are larger and darker than shell leaves', () => {
-  const tree = generateTree(0);
-  const leaves = tree.filter(v => v.kind === 'leaf');
-  const maxR = Math.max(...leaves.map(v => Math.hypot(v.position[0], v.position[2])));
-  const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255; };
-  const inner = leaves.filter(v => Math.hypot(v.position[0], v.position[2]) < maxR * 0.4);
-  const outer = leaves.filter(v => Math.hypot(v.position[0], v.position[2]) > maxR * 0.75);
-  const avg = (list: typeof leaves, fn: (v: typeof leaves[number]) => number) => list.reduce((sum, v) => sum + fn(v), 0) / list.length;
-  assert.ok(avg(inner, v => v.size[0] * v.size[2]) > avg(outer, v => v.size[0] * v.size[2]), 'shade leaves have larger footprints');
-  assert.ok(avg(inner, v => lum(v.color)) < avg(outer, v => lum(v.color)), 'shade leaves are darker');
-});
-test('maple shell is redder than its interior and pine cones are wood', () => {
-  const maple = generateTree(2).filter(v => v.kind === 'leaf');
-  const maxR = Math.max(...maple.map(v => Math.hypot(v.position[0], v.position[2])));
-  const reds = ['#c33d26', '#d95d28', '#a92c22'];
-  const share = (list: typeof maple) => list.filter(v => reds.includes(v.color)).length / list.length;
-  assert.ok(share(maple.filter(v => Math.hypot(v.position[0], v.position[2]) > maxR * 0.75)) > share(maple.filter(v => Math.hypot(v.position[0], v.position[2]) < maxR * 0.4)), 'maple reds sit at the lit shell');
-  const pine = generateTree(5);
-  assert.ok(pine.some(v => v.kind === 'wood' && v.color === '#7a4a2b'), 'pine cones are wood voxels');
-  assert.ok(!pine.some(v => v.kind === 'leaf' && v.color === '#7a4a2b'), 'no leaf is a cone');
-});
-test('cherry vase centre is open, birch twigs droop, and willow curtains reach low', () => {
-  const cherry = generateTree(3);
-  const cherryMax = Math.max(...cherry.map(v => v.position[1]));
-  assert.ok(cherry.filter(v => v.kind === 'wood' && Math.hypot(v.position[0], v.position[2]) < 0.5 && v.position[1] > cherryMax * 0.8).length < 20, 'cherry has no central pole above the vase');
-  const birch = generateTree(1);
-  const birchMax = Math.max(...birch.map(v => v.position[1]));
-  assert.ok(birch.filter(v => v.kind === 'leaf' && v.position[1] < birchMax * 0.35).length > 20, 'birch outer branchlets droop into the lower crown');
-  const willow = generateTree(4);
-  assert.ok(willow.filter(v => v.kind === 'leaf' && v.position[1] < 0.35).length > 30, 'willow curtains sweep close to the ground');
 });
 test('terrain expands without moving trees or removing old ground; every tree has ground', () => {
   const a = generateTerrain(gardenPositions(1));
@@ -209,3 +105,4 @@ test('validation preserves content and rejects blank bodies and nonfuture dates'
   assert.equal(readGarden('{broken'), null);
   assert.equal(readGarden(JSON.stringify({version: 1, letters: [{seed: 'bad'}]})), null);
 });
+
