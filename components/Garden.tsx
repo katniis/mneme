@@ -397,7 +397,7 @@ export default function Garden() {
 			</header>
 
 			<section
-				className={`${styles.world} ${environment.frame.daylight < 0.55 ? styles.night : ''}`}
+				className={`${styles.world} ${environment.frame.daylight < 0.3 ? styles.night : ''}`}
 				aria-label="Interactive floating garden"
 			>
 				<div

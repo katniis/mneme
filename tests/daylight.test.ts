@@ -50,6 +50,31 @@ test('night and disabled daylight retain the existing readable atmosphere', () =
   assert.deepEqual(sampleDaylight(off), neutral);
 });
 
+test('automatic night keeps its blue atmosphere until the actual twilight window', () => {
+  const night = at(Math.PI * 1.5);
+  for (const localHour of ['02', '20', '23']) {
+    const now = Date.parse(`2026-10-29T${localHour}:00:00+08:00`);
+    const frame = resolveEnvironment(now, 'Asia/Manila', DEFAULT_ENVIRONMENT, null);
+    assert.equal(frame.daylight, 0);
+    const profile = sampleDaylight(frame);
+    values(profile).forEach((n, i) => close(n, values(night)[i]));
+  }
+});
+
+test('clock and provider twilight boundaries change lighting continuously', () => {
+  const date = (time: string) => Date.parse(`2026-10-29T${time}:00+08:00`);
+  const prefs = { ...DEFAULT_ENVIRONMENT, weatherMode: 'clear' as const, location: { name: 'Synthetic Manila', latitude: 14.6, longitude: 120.98, timeZone: 'Asia/Manila', source: 'city' as const, deviceZoneAtSelection: 'Asia/Manila' } };
+  const boundaries = [['05:29', '05:30'], ['05:59', '06:00'], ['06:30', '06:31'], ['17:29', '17:30'], ['17:59', '18:00'], ['18:30', '18:31'], ['23:59', '00:00']];
+  for (const solar of [false, true]) for (const [before, after] of boundaries) {
+    const profiles = [before, after].map(time => {
+      const now = date(time);
+      const weather = solar ? { fetchedAt: now, observedAt: now, timeZone: 'Asia/Manila', rainMm: 0, code: 0, cloudCover: 0, temperatureC: 28, isDay: time >= '06:00' && time < '18:00', sunrise: [-1, 0, 1].map(day => date('06:00') + day * 86400000), sunset: [-1, 0, 1].map(day => date('18:00') + day * 86400000) } : null;
+      return values(sampleDaylight(resolveEnvironment(now, 'Asia/Manila', prefs, weather)));
+    });
+    profiles[0].forEach((n, i) => close(n, profiles[1][i], .1));
+  }
+});
+
 test('automatic phase labels and midnight wrap do not introduce lighting jumps', () => {
   for (const clouds of [0, 1]) {
     const wrapped = values(at(2 * Math.PI - 1e-6, clouds));

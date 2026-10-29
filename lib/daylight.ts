@@ -9,7 +9,10 @@ export type DaylightAppearance = {
 };
 const COLOURS = ['skyTop', 'horizon', 'keyColour', 'hemisphereSky', 'hemisphereGround', 'fillColour', 'direction'] as const;
 const INTENSITIES = ['ambient', 'hemisphere', 'key', 'fill', 'stars'] as const;
-const rgb = (hex: string): RGB => new Color(hex).toArray();
+const rgb = (hex: string): RGB => {
+  const colour = new Color(hex);
+  return [colour.r, colour.g, colour.b];
+};
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 function normalize(vector: RGB) {
   const length = Math.hypot(...vector);
@@ -43,9 +46,14 @@ function mix(current: DaylightAppearance, target: Readonly<DaylightAppearance>, 
 export function sampleDaylight(frame: Pick<EnvironmentFrame, 'period' | 'solarAngle' | 'daylight' | 'cloudCover'>): DaylightAppearance {
   const angle = ((frame.solarAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const phase = angle / (Math.PI / 2), index = Math.floor(phase), fraction = phase - index;
-  const profile = structuredClone(frame.period === 'static' ? STATIC : PROFILES[index]);
-  if (frame.period !== 'static') mix(profile, PROFILES[(index + 1) % 4], fraction * fraction * (3 - 2 * fraction));
   const clouds = clamp(frame.cloudCover), daylight = clamp(frame.daylight);
+  const profile = structuredClone(frame.period === 'static' ? STATIC : daylight === 0 ? PROFILES[3] : PROFILES[index]);
+  if (frame.period !== 'static' && daylight > 0) {
+    mix(profile, PROFILES[(index + 1) % 4], fraction * fraction * (3 - 2 * fraction));
+    // Solar timing owns twilight; keyframes alone would stretch sunset halfway to midnight.
+    const darkness = clamp(1 - daylight * 2);
+    if (darkness > 0) mix(profile, PROFILES[3], darkness * darkness * (3 - 2 * darkness));
+  }
   profile.key *= 1 - .55 * clouds;
   for (let i = 0; i < 3; i++) {
     profile.skyTop[i] += (OVERCAST[i] - profile.skyTop[i]) * .24 * daylight * clouds;
