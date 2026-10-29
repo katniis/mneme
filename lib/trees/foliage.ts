@@ -1,4 +1,4 @@
-import { Euler, Vector3 } from 'three';
+import { Euler, Quaternion, Vector3 } from 'three';
 import { random } from './random.ts';
 import { TREE_LIMITS, TREE_PROFILES, type TreeSpecies } from './profiles.ts';
 import type { Organ, Vec3, Voxel, WoodOrgan } from './types.ts';
@@ -67,10 +67,9 @@ export function appendOrgans(voxels: Voxel[], sites: readonly Site[], seed: numb
     if (!voxels[site.parent]) continue;
     const tiles = motif(species, site.organ);
     if (voxels.length + tiles.length > TREE_LIMITS.voxels) continue;
-    const yaw = Math.atan2(site.direction[0], site.direction[2]);
-    const pitch = Math.atan2(-site.direction[1], Math.hypot(site.direction[0], site.direction[2]));
-    const rotation: Vec3 = [pitch, yaw, (rng() - .5) * .3];
-    const euler = new Euler(...rotation), origin = voxels[site.parent].position;
+    const orientation = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), new Vector3(...site.direction).normalize())
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), (rng() - .5) * .3));
+    const euler = new Euler().setFromQuaternion(orientation), rotation: Vec3 = [euler.x, euler.y, euler.z], origin = voxels[site.parent].position;
     const group: Voxel[] = [];
     const colors = site.organ === 'blossom' ? profile.blossom ?? profile.leaf : profile.leaf;
     const color = site.organ === 'fruit' ? species === 'Moonveil' ? '#e5c68b' : '#88664a' : colors[Math.floor(rng() * colors.length)];
@@ -84,7 +83,8 @@ export function appendOrgans(voxels: Voxel[], sites: readonly Site[], seed: numb
       }
       const support = parent < voxels.length ? voxels[parent] : group[parent - voxels.length];
       const start = Math.max(support.end, site.organ === 'blossom' ? .65 : 0);
-      const localRotation: Vec3 = tile.rotation ? [rotation[0], rotation[1] + tile.rotation[1], rotation[2]] : rotation;
+      const localEuler = tile.rotation ? new Euler().setFromQuaternion(orientation.clone().multiply(new Quaternion().setFromEuler(new Euler(...tile.rotation)))) : euler;
+      const localRotation: Vec3 = tile.rotation ? [localEuler.x, localEuler.y, localEuler.z] : rotation;
       group.push({ position, size: [...tile.size], anchor: [...support.position], parent, kind: site.organ === 'fruit' ? 'wood' : 'leaf',
         organ: site.organ, organId: site.organId, color, rotation: localRotation, start, end: start + .012,
         ...(species === 'Moonveil' ? { emissive: site.organ === 'fruit' ? .6 : site.organId % 11 === 0 ? .12 : 0 } : {}),

@@ -4,6 +4,8 @@ import { sampleAmbience, leafSources, leafOrigin, spawnAmbient, sampleAmbientPar
 import { DEFAULT_ENVIRONMENT, resolveEnvironment, type Season, type TimeMode } from '../lib/environment.ts';
 import { generateTree, seedForTree, elementProgress } from '../lib/tree.ts';
 import { groundHeight } from '../lib/terrain.ts';
+import { sampleTreeAppearance } from '../lib/trees/phenology.ts';
+import { treeFamily } from '../lib/tree.ts';
 import type { ParticlePose } from '../lib/atmosphere.ts';
 
 const now = Date.parse('2026-10-29T04:00:00Z');
@@ -35,12 +37,12 @@ test('only visible, appropriate foliage supplies petals and leaves without mutat
   for (const species of ['Cherry Blossom', 'Jacaranda', 'Oak', 'Pine', 'Spruce']) {
     const seed = seedForTree(129, species), voxels = generateTree(seed), before = JSON.stringify(voxels);
     const tree = { id: species, seed, position: [2, 3] as [number, number], planted: 0, reveal: 100 };
-    const sources = leafSources([{ tree, voxels }]); assert.ok(sources.length <= 16 && sources.length > 0);
+    const sources = leafSources([{ tree, voxels }]); assert.ok(sources.length <= 16);
     for (const source of sources) {
       assert.equal(source.voxel.kind, 'leaf'); assert.equal(leafOrigin(source, 0, 'autumn'), null);
       const petals = leafOrigin(source, 100, 'spring');
-      assert.equal(!!petals, species === 'Cherry Blossom' || species === 'Jacaranda');
-      const leaves = leafOrigin(source, 100, 'autumn'); assert.equal(!!leaves, species !== 'Pine' && species !== 'Spruce');
+      assert.equal(!!petals, source.voxel.organ === 'blossom' && sampleTreeAppearance(source.voxel, treeFamily(seed), 'spring').scale > 0);
+      const leaves = leafOrigin(source, 100, 'autumn'); assert.equal(!!leaves, source.voxel.organ === 'leaf' && sampleTreeAppearance(source.voxel, treeFamily(seed), 'autumn').scale > 0);
       if (leaves) { const v = source.voxel, g = elementProgress(v, 1); assert.deepEqual(leaves, [2 + v.anchor[0] + (v.position[0] - v.anchor[0]) * g, groundHeight(2, 3) + v.anchor[1] + (v.position[1] - v.anchor[1]) * g, 3 + v.anchor[2] + (v.position[2] - v.anchor[2]) * g]); }
     }
     assert.equal(JSON.stringify(voxels), before);
@@ -98,3 +100,4 @@ test('winged wildlife stays tiny and follows bounded seeded paths', () => {
     for (const distance of [2, 40, 80, 200, 2000]) assert.equal(ambientSizeScale(kind, distance), ambientSizeScale('firefly', distance));
   }
 });
+

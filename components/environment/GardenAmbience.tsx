@@ -8,6 +8,8 @@ import type { GroundColumn, ParticlePose } from '../../lib/atmosphere';
 import { AMBIENCE_LIMITS, sampleAmbience, leafOrigin, spawnAmbient, sampleAmbientParticle, ambientSizeScale, type AmbientParticle, type LeafSource } from '../../lib/ambience';
 import { fadeNearCamera } from './particleMaterial';
 import useReducedMotion from './useReducedMotion';
+import { sampleTreeAppearance } from '../../lib/trees/phenology';
+import { treeFamily } from '../../lib/tree';
 
 type Props = { frame: EnvironmentFrame; columns: ReadonlyMap<string, GroundColumn>; sources: readonly LeafSource[]; clock: MutableRefObject<GardenState> };
 const WINGS = new Float32Array([-.5, .4, -.2, 0, 0, .25, 0, 0, -.25, 0, 0, -.25, 0, 0, .25, .5, .4, -.2]);
@@ -48,7 +50,7 @@ function AmbientPool({ frame, columns, sources, clock, group, limit }: Props & {
           const origin = candidate && allowed.has(candidate.source) ? leafOrigin(candidate.source, clock.current.time, frame.season) : null;
           if (!candidate || !origin || !profile.debrisKind) { data.opacities[i] = 0; continue; }
           p = spawnAmbient(profile.debrisKind, i, cycle, origin);
-          data.colour.set(frame.season === 'autumn' ? ['#b57d37', '#c0904e', '#9c6639'][seed % 3] : candidate.source.voxel.color);
+          data.colour.set(sampleTreeAppearance(candidate.source.voxel, treeFamily(candidate.source.tree.seed, candidate.source.tree.species), frame.season).color);
         } else {
           const column = grass[seed % grass.length];
           const kind = group === 'birds' ? 'bird' : group === 'butterflies' ? 'butterfly' : group === 'fireflies' ? 'firefly' : 'mote';

@@ -4,6 +4,7 @@ import { groundHeight } from './terrain.ts';
 import { random, treeFamily, elementProgress, type Vec3, type Voxel } from './tree.ts';
 import type { TreeRecord } from './tree-removal.ts';
 import type { ParticlePose } from './atmosphere.ts';
+import { sampleTreeAppearance } from './trees/phenology.ts';
 
 export const AMBIENCE_LIMITS = { desktop: { motes: 160, debris: 96, fireflies: 64, butterflies: 12, birds: 8 }, mobile: { motes: 56, debris: 32, fireflies: 24, butterflies: 4, birds: 3 } } as const;
 export type AmbienceKind = 'mote' | 'petal' | 'leaf' | 'firefly' | 'butterfly' | 'bird';
@@ -35,15 +36,21 @@ export function sampleAmbience(frame: EnvironmentFrame): AmbienceProfile {
 export function leafSources(trees: readonly { tree: TreeRecord; voxels: readonly Voxel[] }[]): LeafSource[] {
   const result: LeafSource[] = [];
   for (const { tree, voxels } of trees) {
-    const leaves = voxels.filter(v => v.kind === 'leaf'), count = Math.min(16, leaves.length), offset = Math.floor(random(tree.seed)() * leaves.length);
-    for (let i = 0; i < count; i++) result.push({ tree, voxel: leaves[(offset + Math.floor(i * leaves.length / count)) % leaves.length] });
+    for (const organ of ['leaf', 'blossom'] as const) {
+      const leaves = voxels.filter(v => v.organ ? v.organ === organ : organ === 'leaf' && v.kind === 'leaf');
+      const count = Math.min(8, leaves.length), offset = Math.floor(random(tree.seed)() * leaves.length);
+      for (let i = 0; i < count; i++) result.push({ tree, voxel: leaves[(offset + Math.floor(i * leaves.length / count)) % leaves.length] });
+    }
   }
   return result;
 }
 
 export function leafOrigin(source: LeafSource, time: number, season: Season): Vec3 | null {
   const family = treeFamily(source.tree.seed, source.tree.species), v = source.voxel;
-  if (v.kind !== 'leaf' || (season === 'spring' ? !['Cherry Blossom', 'Jacaranda'].includes(family) : !['autumn', 'tropical'].includes(season) || ['Pine', 'Spruce'].includes(family))) return null;
+  if (v.kind !== 'leaf' || ['Pine', 'Spruce', 'Moonveil'].includes(family)) return null;
+  const organ = v.organ ?? 'leaf';
+  if (season === 'spring' ? organ !== 'blossom' : !['autumn', 'tropical'].includes(season) || organ !== 'leaf') return null;
+  if (!sampleTreeAppearance(v, family, season, progress(source.tree, time)).scale) return null;
   const g = elementProgress(v, progress(source.tree, time));
   if (g < .95) return null;
   return [source.tree.position[0] + v.anchor[0] + (v.position[0] - v.anchor[0]) * g,

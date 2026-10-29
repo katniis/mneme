@@ -72,9 +72,13 @@ export function voxelizeTree(skeleton: TreeSkeleton, seed: number, species: Tree
   for (const v of voxels) { v.start = v.start / maxDepth * .53; v.end = v.end / maxDepth * .53; }
   const sites = skeleton.sites.filter(s => s.node < count).flatMap(site => {
     const parent = indices.get(positionKey(skeleton.nodes[site.node].position));
-    return parent === undefined ? [] : [{ parent, direction: site.direction, organ: site.organ, organId: site.organId }];
+    return parent === undefined ? [] : [{ parent, direction: site.direction, organ: site.organ, organId: (site.organId ^ (seed >>> 0)) >>> 0 }];
   });
-  appendOrgans(voxels, sites, seed, species);
+  appendOrgans(voxels, [
+    { parent: 0, direction: [.7, .7, .2], organ: 'juvenile-leaf', organId: (0x7ffffffe ^ seed) >>> 0 },
+    { parent: 0, direction: [-.7, .7, -.2], organ: 'juvenile-leaf', organId: (0x7fffffff ^ seed) >>> 0 },
+    ...sites,
+  ], seed, species);
   const duration = Math.max(...voxels.map(v => v.end));
   for (const v of voxels) { v.start /= duration; v.end /= duration; }
   return voxels;

@@ -2,12 +2,14 @@
 import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { elementProgress, random, type Voxel } from '../lib/tree';
+import { elementProgress, random, treeFamily, type Voxel } from '../lib/tree';
 import { progress, type GardenState } from '../lib/garden';
 import { groundHeight, type Position } from '../lib/terrain';
 import { blockRemovalFrame, fallAngle, fallDirection, freezeBlocks, restAngle, type Removal, type TreeRecord } from '../lib/tree-removal';
 import usePixelTexture from './usePixelTexture';
 import type { EnvironmentFrame } from '../lib/environment';
+import { sampleTreeAppearance } from '../lib/trees/phenology';
+import type { VoxelAppearance } from '../lib/trees/types';
 
 function treeEmission(shader: Parameters<THREE.MeshStandardMaterial['onBeforeCompile']>[0]) {
   shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute float treeEmission;\nvarying float vTreeEmission;')
@@ -37,14 +39,13 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
   const completed = useRef(false);
   const texture = usePixelTexture();
   const emission = useMemo(() => new THREE.InstancedBufferAttribute(new Float32Array(data.length), 1), [data]);
-  useLayoutEffect(() => {
-    data.forEach((v, i) => emission.setX(i, (v.emissive ?? 0) * (.25 + .75 * (1 - environment.daylight))));
-    emission.needsUpdate = true;
-  }, [data, emission, environment.daylight]);
+  const displayed = useMemo<VoxelAppearance[]>(() => data.map(v => ({ scale: 0, color: v.color, emissive: 0 })), [data]);
+  const appearanceKey = useRef('');
+  const color = useMemo(() => new THREE.Color(), []);
   const effect = useMemo(() => {
     if (!removal) return null;
     const rng = random(tree.seed);
-    const frozen = freezeBlocks(data, Math.max(0, lastProgress.current));
+    const frozen = freezeBlocks(data, Math.max(0, lastProgress.current), displayed);
     const direction = fallDirection(tree, survivors, plots);
     const axis = new THREE.Vector3(Math.cos(direction), 0, -Math.sin(direction));
     const contact = restAngle(frozen, tree.position, direction, groundHeight);
@@ -61,16 +62,22 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
       particleSize: Math.min(.14, Math.max(...block.size) * .35),
     })).sort((a, b) => a.order - b.order);
     return { axis, contact, blocks };
-  }, [removal, data, tree, survivors, plots]);
+  }, [removal, data, tree, survivors, plots, displayed]);
 
   useLayoutEffect(() => {
     const color = new THREE.Color();
-    data.forEach((v, i) => mesh.current.setColorAt(i, color.set(v.color)));
+    if (!effect) {
+      dummy.scale.setScalar(0); dummy.updateMatrix();
+      data.forEach((v, i) => { mesh.current.setColorAt(i, color.set(v.color)); mesh.current.setMatrixAt(i, dummy.matrix); });
+      mesh.current.instanceMatrix.needsUpdate = true;
+    }
     if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
     if (effect && particles.current) {
       dummy.scale.setScalar(0);
       dummy.updateMatrix();
       effect.blocks.forEach((block, i) => {
+        mesh.current.setColorAt(block.sourceIndex, color.set(block.color));
+        emission.setX(block.sourceIndex, block.emissive ?? 0);
         particles.current.setColorAt(i, color.set(block.color));
         particles.current.setMatrixAt(i, dummy.matrix);
       });
@@ -78,7 +85,9 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
       particles.current.instanceMatrix.needsUpdate = true;
       delete document.body.dataset.treeHover;
     }
-  }, [data, effect, dummy]);
+    emission.needsUpdate = true;
+    if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
+  }, [data, effect, dummy, emission]);
 
   useFrame(() => {
     if (removal && effect) {
@@ -112,10 +121,17 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
     const p = progress(tree, clock.current.time);
     const waiting = performance.now() - born.current < 1400 && p < .05;
     const value = waiting ? 0 : Math.max(.035, p);
-    if (lastProgress.current === value) return;
+    const key = `${environment.season}:${environment.daylight}`;
+    if (lastProgress.current === value && appearanceKey.current === key) return;
     lastProgress.current = value;
+    appearanceKey.current = key;
+    const species = treeFamily(tree.seed, tree.species);
     data.forEach((v, i) => {
-      const g = elementProgress(v, value);
+      const a = sampleTreeAppearance(v, species, environment.season, value);
+      a.emissive *= .25 + .75 * (1 - environment.daylight);
+      displayed[i] = a;
+      mesh.current.setColorAt(i, color.set(a.color)); emission.setX(i, a.emissive);
+      const g = elementProgress(v, value) * a.scale;
       dummy.position.set(...v.position.map((n, axis) => v.anchor[axis] + (n - v.anchor[axis]) * g) as [number, number, number]);
       const girth = v.kind === 'wood' && v.size[0] > .22 ? .25 + .75 * Math.min(1, value / .5) : 1;
       dummy.rotation.set(v.rotation?.[0] ?? 0, v.rotation?.[1] ?? 0, v.rotation?.[2] ?? 0);
@@ -124,6 +140,8 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
       mesh.current.setMatrixAt(i, dummy.matrix);
     });
     mesh.current.instanceMatrix.needsUpdate = true;
+    if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
+    emission.needsUpdate = true;
   });
 
   const choose = (e: ThreeEvent<MouseEvent>) => {
@@ -132,6 +150,11 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
   return (
     <group position={[tree.position[0], groundHeight(...tree.position), tree.position[1]]}>
       <instancedMesh ref={mesh} args={[undefined, undefined, data.length]} castShadow receiveShadow frustumCulled={false}
+        raycast={function (this: THREE.InstancedMesh, raycaster, hits) {
+          const candidates: THREE.Intersection[] = [];
+          THREE.InstancedMesh.prototype.raycast.call(this, raycaster, candidates);
+          hits.push(...candidates.filter(hit => displayed[hit.instanceId ?? -1]?.scale > 0));
+        }}
         onClick={removal ? undefined : choose}
         onPointerOver={removal ? undefined : (e) => { e.stopPropagation(); document.body.dataset.treeHover = 'true'; }}
         onPointerOut={() => { delete document.body.dataset.treeHover; }}>
