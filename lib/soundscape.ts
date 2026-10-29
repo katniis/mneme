@@ -34,13 +34,18 @@ export function readAudioSettings(raw: string | null): { version: 1; volume: num
 
 export function soundEvents(profile: SoundscapeProfile, seed: number, windowIndex: number): SoundEvent[] {
   const rng = random(seed + windowIndex * 73856093), result: SoundEvent[] = [];
-  if (profile.birds > 0 && rng() < profile.birds * .3) {
-    const start = .15 + rng() * .7;
-    for (const voice of [0, 1] as const) result.push({ voice, at: start + voice * .25, duration: .12 + rng() * .16, fromHz: 1800 + rng() * 1800, toHz: 1800 + rng() * 1800, gain: .2 + rng() * .1, pan: rng() * 1.2 - .6 });
+  if (profile.birds > 0 && rng() < profile.birds * .55) {
+    const start = .1 + rng() * .2, count = 2 + Math.floor(rng() * 3) * 2;
+    const base = 2200 + rng() * 1000, direction = rng() < .5 ? -1 : 1, pan = rng() * 1.2 - .6;
+    for (let i = 0; i < count; i++) {
+      const fromHz = base + Math.sin(i * .9) * 100;
+      result.push({ voice: i % 2 ? 1 : 0, at: start + i * .25, duration: .12 + rng() * .16, fromHz, toHz: fromHz + direction * (100 + rng() * 200), gain: .2 + rng() * .1, pan });
+    }
   }
-  if (profile.insects > 0 && rng() < profile.insects * .65) {
-    const start = .25 + rng() * .7, frequency = 3600 + rng() * 1200;
-    for (let i = 0; i < 6; i++) result.push({ voice: i % 2 ? 3 : 2, at: start + i * .09, duration: .025 + rng() * .025, fromHz: frequency, toHz: Math.max(3600, frequency * .99), gain: .04 + rng() * .04, pan: rng() * 1.2 - .6 });
+  if (profile.insects > 0 && rng() < profile.insects * .85) {
+    const start = .25 + rng() * .7, frequency = 3600 + rng() * 1200, count = rng() < .5 ? 3 : 6;
+    const spacing = .07 + rng() * .04, pan = rng() * 1.2 - .6;
+    for (let i = 0; i < count; i++) result.push({ voice: i % 2 ? 3 : 2, at: start + i * spacing, duration: .025 + rng() * .025, fromHz: frequency, toHz: Math.max(3600, frequency * .99), gain: .04 + rng() * .04, pan });
   }
   return result;
 }

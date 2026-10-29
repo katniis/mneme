@@ -32,7 +32,7 @@ test('scheduled calls vary in sparse bounded windows without same-voice overlap'
   const p = { birds: 1, insects: 1 }, distinct = new Set<string>();
   for (let window = 0; window < 1000; window++) {
     const events = soundEvents(p, 1977, window); assert.deepEqual(events, soundEvents(p, 1977, window)); distinct.add(JSON.stringify(events));
-    assert.ok(events.length <= 8 && events.filter(e => e.voice < 2).length <= 2 && events.filter(e => e.voice >= 2).length <= 6);
+    assert.ok(events.length <= 12 && events.filter(e => e.voice < 2).length <= 6 && events.filter(e => e.voice >= 2).length <= 6);
     for (const e of events) {
       const bird = e.voice < 2;
       assert.ok(e.at >= 0 && e.at + e.duration <= 2 && Math.abs(e.pan) <= .6);
@@ -45,4 +45,17 @@ test('scheduled calls vary in sparse bounded windows without same-voice overlap'
   }
   assert.ok(distinct.size > 100);
   assert.deepEqual(soundEvents({ ...p, birds: 0, insects: 0 }, 1977, 0), []);
+});
+
+test('bird phrases and cricket pulses vary without adding voices or continuous noise', () => {
+  const birds = new Set<number>(), insects = new Set<number>(), contours = new Set<string>();
+  let birdWindows = 0, insectWindows = 0;
+  for (let window = 0; window < 1000; window++) {
+    const events = soundEvents({ birds: 1, insects: 1 }, 1977, window);
+    const b = events.filter(e => e.voice < 2), c = events.filter(e => e.voice >= 2);
+    if (b.length) { birds.add(b.length); birdWindows++; contours.add(b[0].toHz > b[0].fromHz ? 'rising' : 'falling'); }
+    if (c.length) { insects.add(c.length); insectWindows++; }
+  }
+  assert.deepEqual([...birds].sort(), [2, 4, 6]); assert.deepEqual([...insects].sort(), [3, 6]);
+  assert.equal(contours.size, 2); assert.ok(birdWindows > 450 && birdWindows < 650); assert.ok(insectWindows > 750 && insectWindows < 950);
 });
