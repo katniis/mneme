@@ -20,9 +20,9 @@ export function useAmbientAudio(frame: EnvironmentFrame, available: boolean) {
     const src = SEASON_TRACKS[latest.current.frame.season].src;
     if (s.loadingSrc === src && !s.request?.signal.aborted) return;
     s.request?.abort(); s.loadingSrc = undefined;
+    setStatus('');
     if (s.trackSrc === src) return;
     const request = new AbortController(); s.request = request; s.loadingSrc = src;
-    setStatus('');
     try {
       const response = await fetch(src, { signal: request.signal });
       if (!response.ok) throw new Error('Music unavailable');
