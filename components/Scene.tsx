@@ -21,6 +21,8 @@ import EnvironmentSky from './environment/EnvironmentSky';
 import Rain from './environment/Rain';
 import Snow from './environment/Snow';
 import { groundColumns } from '../lib/atmosphere';
+import { leafSources } from '../lib/ambience';
+import GardenAmbience from './environment/GardenAmbience';
 import type { GardenState, Letter } from '../lib/garden';
 import type { Removal } from '../lib/tree-removal';
 import Tree from './Tree';
@@ -289,6 +291,9 @@ function World(props: Props) {
 			),
 		[trees],
 	);
+  const sources = useMemo(() => leafSources(trees.filter(({ letter }) => letter.id !== props.removal?.tree.id).map(({ letter, data }) => ({
+    tree: { id: letter.id, seed: letter.seed, position: letter.position, planted: letter.planted, reveal: letter.reveal }, voxels: data,
+  }))), [trees, props.removal?.tree.id]);
 	useEffect(() => {
 		const seeds = new Set(trees.map(t => t.letter.seed));
 		for (const seed of cache.current.keys()) if (!seeds.has(seed)) cache.current.delete(seed);
@@ -324,6 +329,7 @@ function World(props: Props) {
       <Terrain positions={positions} data={ground} environment={props.environment} />
       <Rain {...extent} treeTop={height} columns={columns} intensity={props.environment.rainIntensity} enabled={props.environment.enabled && props.environment.rainIntensity > 0} />
       <Snow {...extent} treeTop={height} columns={columns} enabled={props.environment.enabled && props.environment.snow} />
+      <GardenAmbience frame={props.environment} columns={columns} sources={sources} clock={props.clock} />
 			{trees.map(({ letter, data }) => (
 				<Tree
 					key={letter.id}
