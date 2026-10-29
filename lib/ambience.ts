@@ -42,7 +42,7 @@ export function leafSources(trees: readonly { tree: TreeRecord; voxels: readonly
 }
 
 export function leafOrigin(source: LeafSource, time: number, season: Season): Vec3 | null {
-  const family = treeFamily(source.tree.seed), v = source.voxel;
+  const family = treeFamily(source.tree.seed, source.tree.species), v = source.voxel;
   if (v.kind !== 'leaf' || (season === 'spring' ? !['Cherry Blossom', 'Jacaranda'].includes(family) : !['autumn', 'tropical'].includes(season) || ['Pine', 'Spruce'].includes(family))) return null;
   const g = elementProgress(v, progress(source.tree, time));
   if (g < .95) return null;
@@ -81,3 +81,4 @@ export function sampleAmbientParticle(p: AmbientParticle, age: number, out: Part
 export function ambientSizeScale(kind: AmbienceKind, distance: number): number {
   return kind === 'firefly' || kind === 'bird' || kind === 'butterfly' ? Math.max(1, Math.min(12, distance / 25)) : Math.min(2.5, 1 + Math.max(0, distance) / 90);
 }
+

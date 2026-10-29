@@ -7,8 +7,16 @@ import { progress, type GardenState } from '../lib/garden';
 import { groundHeight, type Position } from '../lib/terrain';
 import { blockRemovalFrame, fallAngle, fallDirection, freezeBlocks, restAngle, type Removal, type TreeRecord } from '../lib/tree-removal';
 import usePixelTexture from './usePixelTexture';
+import type { EnvironmentFrame } from '../lib/environment';
 
-export default function Tree({ tree, data, clock, selected, onSelect, removal, survivors, plots, onRemovalComplete }: {
+function treeEmission(shader: Parameters<THREE.MeshStandardMaterial['onBeforeCompile']>[0]) {
+  shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute float treeEmission;\nvarying float vTreeEmission;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTreeEmission = treeEmission;');
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vTreeEmission;')
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vTreeEmission;');
+}
+
+export default function Tree({ tree, data, clock, selected, onSelect, removal, survivors, plots, onRemovalComplete, environment }: {
   tree: TreeRecord;
   data: Voxel[];
   clock: MutableRefObject<GardenState>;
@@ -18,6 +26,7 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
   survivors: TreeRecord[];
   plots: Position[];
   onRemovalComplete(id: string): void;
+  environment: Pick<EnvironmentFrame, 'season' | 'daylight'>;
 }) {
   const mesh = useRef<THREE.InstancedMesh>(null!);
   const particles = useRef<THREE.InstancedMesh>(null!);
@@ -27,6 +36,11 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
   const born = useRef(performance.now());
   const completed = useRef(false);
   const texture = usePixelTexture();
+  const emission = useMemo(() => new THREE.InstancedBufferAttribute(new Float32Array(data.length), 1), [data]);
+  useLayoutEffect(() => {
+    data.forEach((v, i) => emission.setX(i, (v.emissive ?? 0) * (.25 + .75 * (1 - environment.daylight))));
+    emission.needsUpdate = true;
+  }, [data, emission, environment.daylight]);
   const effect = useMemo(() => {
     if (!removal) return null;
     const rng = random(tree.seed);
@@ -121,8 +135,8 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
         onClick={removal ? undefined : choose}
         onPointerOver={removal ? undefined : (e) => { e.stopPropagation(); document.body.dataset.treeHover = 'true'; }}
         onPointerOut={() => { delete document.body.dataset.treeHover; }}>
-        <boxGeometry />
-        <meshStandardMaterial map={texture} roughness={1} />
+        <boxGeometry><primitive object={emission} attach="attributes-treeEmission" /></boxGeometry>
+        <meshStandardMaterial map={texture} roughness={1} onBeforeCompile={treeEmission} />
       </instancedMesh>
       {effect && effect.blocks.length > 0 && (
         <instancedMesh ref={particles} args={[undefined, undefined, effect.blocks.length]} frustumCulled={false} raycast={() => {}}>

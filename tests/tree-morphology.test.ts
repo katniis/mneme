@@ -8,6 +8,7 @@ import { buildFloweringSkeleton } from '../lib/trees/flowering.ts';
 import { buildPineSkeleton } from '../lib/trees/pine.ts';
 import { buildSpruceSkeleton } from '../lib/trees/spruce.ts';
 import { buildWillowSkeleton } from '../lib/trees/willow.ts';
+import { buildMoonveilSkeleton } from '../lib/trees/moonveil.ts';
 import { assertTree } from './tree-assertions.ts';
 
 for (const [species, seeds] of [['Oak', [0, 8, 16]], ['Birch', [1, 9, 17]], ['Maple', [2, 10, 18]]] as const) {
@@ -27,6 +28,19 @@ for (const [species, seeds] of [['Oak', [0, 8, 16]], ['Birch', [1, 9, 17]], ['Ma
     }
   });
 }
+
+test('Moonveil has connected twisting stems, offset crowns and attached glowing pods', () => {
+  for (const seed of [100, 200, 300]) {
+    const tree = generateTree(seed, 'Moonveil'), s = buildMoonveilSkeleton(seed);
+    assertTree(tree);
+    const h = Math.max(...tree.map(v => v.position[1] + v.size[1] / 2));
+    assert.ok(h >= 6.7 && h <= 7.7, `height ${h}`);
+    assert.ok(s.nodes.filter(n => n.organ === 'trunk').length > 12);
+    assert.ok(tree.filter(v => v.organ === 'fruit').length >= 12);
+    assert.ok(tree.every(v => (v.emissive ?? 0) <= .6));
+  }
+  for (let seed = 0; seed < 8; seed++) assert.ok(generateTree(seed).every(v => !v.emissive));
+});
 
 test('colonization ends for unreachable and coincident attractors without mutating its input', () => {
   const skeleton = buildBroadleafSkeleton(0, 'Oak'), before = JSON.stringify(skeleton);

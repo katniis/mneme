@@ -8,10 +8,10 @@ import { progress, advanceTime, validateLetter, readGarden } from '../lib/garden
 test('a seed preserves every tree voxel; different seeds produce different anatomy', () => {
   assert.deepEqual(generateTree(1024), generateTree(1024));
   assert.notDeepEqual(generateTree(1024), generateTree(1025));
-  assert.equal(new Set([0, 1, 2].map(treeFamily)).size, 3);
+  assert.equal(new Set([0, 1, 2].map(seed => treeFamily(seed))).size, 3);
 });
 test('eight species are assigned by seed with legacy names preserved', () => {
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(treeFamily), ['Oak', 'Birch', 'Maple', 'Cherry Blossom', 'Weeping Willow', 'Pine', 'Jacaranda', 'Spruce']);
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(seed => treeFamily(seed)), ['Oak', 'Birch', 'Maple', 'Cherry Blossom', 'Weeping Willow', 'Pine', 'Jacaranda', 'Spruce']);
 });
 test('every growing element retains completed support and monotonic growth', () => {
   for (const seed of [0, 1, 2, 3, 4, 5, 6, 7, 57, 999]) {
@@ -105,4 +105,5 @@ test('validation preserves content and rejects blank bodies and nonfuture dates'
   assert.equal(readGarden('{broken'), null);
   assert.equal(readGarden(JSON.stringify({version: 1, letters: [{seed: 'bad'}]})), null);
 });
+
 

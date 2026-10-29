@@ -17,7 +17,7 @@ import {
 	type Draft,
 	type GardenState,
 } from "../lib/garden";
-import { seedForTree, TREE_SPECIES, treeFamily } from '../lib/tree';
+import { chooseTree, TREE_SPECIES, treeFamily } from '../lib/tree';
 import EnvironmentPanel from './environment/EnvironmentPanel';
 import { useEnvironment } from './environment/useEnvironment';
 import { useAmbientAudio } from './environment/useAmbientAudio';
@@ -275,7 +275,7 @@ export default function Garden() {
 			return;
 		}
 		const reveal = Date.parse(`${draft.date}T12:00:00`);
-		const seed = seedForTree(crypto.getRandomValues(new Uint32Array(1))[0], draft.tree);
+		const { seed, species } = chooseTree(crypto.getRandomValues(new Uint32Array(1))[0], draft.tree);
 		const planting = nextPlanting(state);
 		const letter = {
 			id: crypto.randomUUID(),
@@ -284,6 +284,7 @@ export default function Garden() {
 			planted: state.time,
 			reveal,
 			seed,
+      species,
 			position: planting.position,
 		};
 		const reducedMotion = window.matchMedia(
@@ -699,7 +700,7 @@ export default function Garden() {
 								>
 									<option value="">Surprise me</option>
 									{TREE_SPECIES.map((species) => (
-										<option key={species} value={species}>{species}</option>
+										<option key={species} value={species}>{species === 'Moonveil' ? 'Moonveil (mystical)' : species}</option>
 									))}
 								</select>
 								<div className={styles.plantNote}>
@@ -729,7 +730,7 @@ export default function Garden() {
 						{panel === "detail" && selectedLetter && (
 							<div className={styles.details}>
 								<span className={styles.species}>
-									{treeFamily(selectedLetter.seed)} · A living
+									{treeFamily(selectedLetter.seed, selectedLetter.species)} · A living
 									letter
 								</span>
 								<h2 id="panel-title">{selectedLetter.title}</h2>
@@ -858,7 +859,7 @@ export default function Garden() {
 															{l.title}
 														</strong>
 														<small>
-															{treeFamily(l.seed)}{" "}
+															{treeFamily(l.seed, l.species)}{" "}
 															·{" "}
 															{stage(
 																progress(
@@ -983,4 +984,5 @@ export default function Garden() {
 		</main>
 	);
 }
+
 

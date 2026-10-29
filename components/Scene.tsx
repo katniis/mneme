@@ -14,7 +14,7 @@ import {
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
-import { generateTree, type Voxel } from '../lib/tree';
+import { generateTree, treeFamily, type Voxel } from '../lib/tree';
 import { generateTerrain, type Position, type TerrainVoxel } from '../lib/terrain';
 import { terrainColour, type EnvironmentFrame } from '../lib/environment';
 import EnvironmentSky from './environment/EnvironmentSky';
@@ -269,13 +269,14 @@ function CameraRig({
 function World(props: Props) {
 	const ground = useMemo(() => generateTerrain(props.plots), [props.plots]);
   const columns = useMemo(() => groundColumns(ground), [ground]);
-	const cache = useRef(new Map<number, Voxel[]>());
+	const cache = useRef(new Map<string, Voxel[]>());
 	const trees = useMemo(
 		() =>
 			(props.removal ? [...props.letters, props.removal.tree] : props.letters).map((letter) => {
-				if (!cache.current.has(letter.seed))
-					cache.current.set(letter.seed, generateTree(letter.seed));
-				return { letter, data: cache.current.get(letter.seed)! };
+				const key = `${treeFamily(letter.seed, letter.species)}:${letter.seed}`;
+                if (!cache.current.has(key))
+					cache.current.set(key, generateTree(letter.seed, letter.species));
+				return { letter, data: cache.current.get(key)! };
 			}),
 		[props.letters, props.removal],
 	);
@@ -292,10 +293,10 @@ function World(props: Props) {
 		[trees],
 	);
   const sources = useMemo(() => leafSources(trees.filter(({ letter }) => letter.id !== props.removal?.tree.id).map(({ letter, data }) => ({
-    tree: { id: letter.id, seed: letter.seed, position: letter.position, planted: letter.planted, reveal: letter.reveal }, voxels: data,
+    tree: { id: letter.id, seed: letter.seed, species: letter.species, position: letter.position, planted: letter.planted, reveal: letter.reveal }, voxels: data,
   }))), [trees, props.removal?.tree.id]);
 	useEffect(() => {
-		const seeds = new Set(trees.map(t => t.letter.seed));
+		const seeds = new Set(trees.map(t => `${treeFamily(t.letter.seed, t.letter.species)}:${t.letter.seed}`));
 		for (const seed of cache.current.keys()) if (!seeds.has(seed)) cache.current.delete(seed);
 	}, [trees]);
 	const positions = props.plots;
@@ -335,6 +336,7 @@ function World(props: Props) {
 					key={letter.id}
 					tree={letter}
 					data={data}
+          environment={props.environment}
 					clock={props.clock}
 					selected={props.selected === letter.id}
 					onSelect={props.onSelect}
@@ -382,3 +384,4 @@ export default function Scene(props: Props) {
 		</Canvas>
 	);
 }
+

@@ -1,4 +1,5 @@
 import { placement, type Position } from './terrain.ts';
+import { isTreeSpecies, type TreeSpecies } from './trees/profiles.ts';
 export const STORAGE_KEY = "mneme-garden-v1";
 export const DRAFT_KEY = "mneme-draft-v1";
 export type Letter = {
@@ -8,6 +9,7 @@ export type Letter = {
 	planted: number;
 	reveal: number;
 	seed: number;
+  species?: TreeSpecies;
 	position: Position;
 };
 export type GardenState = {
@@ -97,6 +99,7 @@ export function readGarden(raw: string | null): GardenState | null {
 			)
 				return null;
 			ids.add(l.id);
+      if ('species' in l && !isTreeSpecies(l.species)) delete l.species;
 		}
 		const plots = state.version === 1 ? state.letters.map((l: Letter) => l.position) : state.plots;
 		if (!Array.isArray(plots) || plots.some(p => !Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite))) return null;
