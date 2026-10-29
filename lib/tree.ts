@@ -1,27 +1,7 @@
-export type Vec3 = [number, number, number];
-export type Voxel = {
-	position: Vec3;
-	anchor: Vec3;
-	size: Vec3;
-	color: string;
-	start: number;
-	end: number;
-	parent: number;
-	kind: "wood" | "leaf";
-	rotation?: Vec3;
-};
-
-export function random(seed: number) {
-	let value = seed >>> 0;
-	return () => {
-		value += 0x6d2b79f5;
-		let t = value;
-		t = Math.imul(t ^ (t >>> 15), t | 1);
-		t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-	};
-}
-
+import { random } from './trees/random.ts';
+import type { Vec3, Voxel } from './trees/types.ts';
+export { random } from './trees/random.ts';
+export type { Vec3, Voxel } from './trees/types.ts';
 type SpeciesProfile = {
 	name: string;
 	form: "broadleaf" | "conifer" | "willow";
