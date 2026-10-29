@@ -18,13 +18,13 @@ export function anatomy(seed: number, species: TreeSpecies) {
     }
     return parent;
   }
-  function site(node: number, direction: Vec3, organ: OrganSite['organ'] = 'leaf') {
-    skeleton.sites.push({ node, direction, organ, organId: skeleton.sites.length });
+  function site(node: number, direction: Vec3, organ: OrganSite['organ'] = 'leaf', along = 1) {
+    skeleton.sites.push({ node, along, direction, organ, organId: skeleton.sites.length });
   }
   function dress(node: number, angle: number, count = 3, organ: OrganSite['organ'] = 'leaf') {
-    const p = skeleton.nodes[node].parent;
-    for (let j = 0; j < count; j++) site(j === 0 && p >= 0 ? p : node,
-      [Math.cos(angle + j * (species === 'Maple' ? Math.PI : 2.4)), (rng() - .5) * .7, Math.sin(angle + j * (species === 'Maple' ? Math.PI : 2.4))], organ);
+    for (let j = 0; j < count; j++) site(node,
+      [Math.cos(angle + j * (species === 'Maple' ? Math.PI : 2.4)), (rng() - .5) * 2, Math.sin(angle + j * (species === 'Maple' ? Math.PI : 2.4))], organ,
+      species === 'Maple' ? (Math.floor(j / 2) % 3 + 1) / 3 : (j % 4 + 1) / 4);
   }
   return { skeleton, rng, height, radius, path, site, dress };
 }

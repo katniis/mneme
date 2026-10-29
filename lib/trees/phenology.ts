@@ -21,7 +21,7 @@ export function sampleTreeAppearance(v: Voxel, species: TreeSpecies, season: Sea
   const organ = v.organ ?? (v.kind === 'leaf' ? 'leaf' : 'branch'), id = v.organId ?? 0, pick = fraction(id);
   const stage = season === 'spring' ? 0 : season === 'autumn' ? 2 : season === 'winter' ? 3 : 1;
   let density = 1, color = v.color;
-  if (organ === 'juvenile-leaf') density = growth > .2 ? 0 : 1;
+  if (organ === 'juvenile-leaf') density = growth > .2 ? 0 : DENSITY[species][stage];
   else if (organ === 'blossom') density = growth < .65 ? 0 : stage === 0 ? 1 : species === 'Jacaranda' && season === 'summer' ? .1 : 0;
   else if (organ === 'leaf') density = DENSITY[species][stage];
   const foliage = organ === 'leaf' || organ === 'needle' || organ === 'juvenile-leaf';

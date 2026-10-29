@@ -20,6 +20,7 @@ export function colonize(seed: number, input: TreeSkeleton, attractors: readonly
       directions.set(nearest, sum); return true;
     });
     if (!directions.size) break;
+    const before = tree.nodes.length;
     for (const [parent, d] of directions) {
       if (tree.nodes.length >= TREE_LIMITS.nodes) break;
       d[1] += .12; const length = Math.hypot(...d);
@@ -29,6 +30,7 @@ export function colonize(seed: number, input: TreeSkeleton, attractors: readonly
       tree.nodes.push({ position, parent, radius: .014, organ: 'twig', order: tree.nodes[parent].order + 1 });
       tree.sites.push({ node, direction: [rng() - .5, .1, rng() - .5], organ: 'leaf', organId: tree.sites.length });
     }
+    if (tree.nodes.length === before) break;
   }
   return tree;
 }

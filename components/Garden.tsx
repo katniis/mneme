@@ -329,8 +329,8 @@ export default function Garden() {
 		clock.current = next;
 		setGarden(next);
 		if (webgl && sceneReady && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-			const { seed, position, planted, reveal } = letter;
-			const effect: Removal = { tree: { id, seed, position, planted, reveal }, startedAt: performance.now() };
+			const { seed, species, position, planted, reveal } = letter;
+			const effect: Removal = { tree: { id, seed, species, position, planted, reveal }, startedAt: performance.now() };
 			removalRef.current = effect;
 			setRemoval(effect);
 		}

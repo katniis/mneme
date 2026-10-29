@@ -1,0 +1,24 @@
+[
+  {
+    "width": 1440,
+    "height": 1000,
+    "frames": 300,
+    "median": 7,
+    "p95": 13.899999999999636,
+    "drawCalls": 57,
+    "triangles": 5728532,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0",
+    "reloadIdentity": true
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "frames": 300,
+    "median": 6.900000000000546,
+    "p95": 7.100000000000364,
+    "drawCalls": 57,
+    "triangles": 5727252,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0",
+    "reloadIdentity": true
+  }
+]

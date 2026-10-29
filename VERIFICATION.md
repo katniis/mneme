@@ -307,3 +307,59 @@ Firefly ceilings increased from 32/8 to **64 desktop / 24 mobile**, without chan
 - Screenshots: `screenshots/seasonal-wildlife-{desktop,mobile}.png`, `seasonal-fireflies-{desktop,mobile}.png`, `seasonal-autumn-snow-paused.png`, `seasonal-winter-snow-desktop.png`, `seasonal-small-mobile.png`, `seasonal-49-{desktop,mobile}.png`. Motion: `recordings/seasonal-wildlife.webm` and `screenshots/seasonal-wildlife-contact.png`.
 
 Limitations: subjective listening on speakers/headphones, physical-device FPS/memory, live GPS/provider behavior, and prolonged physical playback were not measured. The unchanged original music files total **42,986,800 bytes**; only the current seasonal file is fetched after sound opt-in, with its replacement loaded on season change. No merge, push, deployment, or new runtime dependency was performed.
+
+## Botanical tree revamp — 2026-10-29
+
+The requested checkpoint is `7664daa1b0b560c1ffbff6623771961f1bd0f988`, created before product edits. Implementation uses the requested `C:/Users/jbree/.codex/worktrees/local-environment/mneme` main worktree. Letters, legacy seeds and positions, retained land, storage version and the simulation clock are preserved. No merge, push, deployment or runtime dependency was added.
+
+### Botanical and visual evidence
+
+- Primary references and cultivar/season caveats are in `research/tree-botany-2026-10-29.md`. The selected real exemplars are *Quercus robur*, *Betula pendula*, upright green *Acer palmatum*, pink Prunus ‘Kanzan’, the weeping *Salix babylonica* habit, established *Pinus sylvestris*, *Jacaranda mimosifolia* and *Picea abies*. Moonveil is fictional.
+- `research/tree-actual-studies.html` juxtaposes source-hosted reference photographs with actual generated arrays. The previous `tree-reference-board.html` remains a schematic planning board. The new board supports three seeded forms, front/side colour, grayscale silhouette, bare structure, four seasons, four growth stages and close views. Form studies show the stored organ repertoire together; seasonal studies apply the real appearance resolver. Study lighting is neutral; product lighting is inspected separately.
+- Inspected all 27 specimens against the references using `screenshots/trees-reference-contact-{0,1,2}.jpg` and the full 54 studies in `screenshots/tree-studies/`. Initial inspection exposed a bare upper oak and flat crowns, sparse willow arches, terminal leaf knots and insufficiently divided jacaranda foliage. Refinements deepened the crowns, distributed whole-organ budget thinning, placed leaves along shoots with paired maple attachment, filled upper willow supports and split jacaranda pinnae into paired tiny leaflets. Targeted regressions were observed failing before the corrections and passing afterward.
+- The final forms retain a stout low oak bole and spreading limbs; pale narrow birch leader with pendant fine shoots; low layered maple and palmate blades; ascending cherry vase with separate pink clusters; arching willow supports and leaf curtains; clear lower pine bole/orange upper bark/paired needle tufts; long-bole jacaranda with fine fronds and violet panicles; conic spruce leader/uneven whorls/radial needles/hanging cones. Pine and spruce remain distinct without colour. Moonveil has connected twisting pale strands, unequal offset crown layers, indigo/teal foliage and attached small gold pods.
+- These are miniature voxel interpretations using the agreed art-direction bounds. Seasonal stages are illustrative, especially jacaranda's warm-climate dry-season thinning. Classic and Tropical use healthy summer foliage; spring cherry flowers are not permanent.
+
+### Deterministic, storage and seasonal checks
+
+- `npm test`: **102 passed, 0 failed**. `npm run typecheck`, production `npm run build` and `git diff --check` passed. Build-generated `next-env.d.ts` was restored to its checkpoint content.
+- `node --experimental-strip-types scripts/verify-trees.mjs --check` passed for all 27 named specimens: deterministic/mutation-safe geometry, one root, earlier completed parents, exact parent anchors, oriented box contact, positive finite sizes, normalized growth, unique wood positions, researched height/crown ranges and fixed budgets. Largest measured output: **11,999 voxels / 430 skeleton nodes**, below 12,000 / 512. Per-species/per-seed counts and timings are in `research/tree-verification.json`.
+- Pipe taper, connected face-contact wood, lobed/compound foliage, needle arrangement, low willow foliage, flowering onset, stout oak occupancy, opposite maple attachment and nonstructural fruit are covered. Empty, unreachable, coincident and cancelling-attraction crowns terminate; the no-progress regression reduced repeated attractor reads from the iteration ceiling to an immediate stop. No unbounded crown sampling was added.
+- Legacy `% 8` identity is checked for 4,096 seeds, `2**32`, `2**40+3` and `Number.MAX_SAFE_INTEGER`. All nine manual choices, deterministic nine-way Surprise, same-seed different-species geometry, unchanged legacy JSON and invalid optional metadata preserving valid letters are covered. New plantings persist explicit species; cache keys include species and seed.
+- The full nine-species/six-season resolver checks deterministic whole-organ densities without changing anatomy. Tests cover green summer maple, autumn palettes, spring-only cherry flowers, residual summer jacaranda bloom, evergreen needles, juvenile growth and seasonal gating, neutral/tropical fallback, and bounded Moonveil emission with zero real-tree emission.
+- Debris uses visible matching leaf/blossom organs and current colours; needles and Moonveil are excluded. Removal snapshots exclude hidden organs and retain colour/emission/pose through later season changes. Small tagged trunk/branch cubes support the fall; cones and fine twigs do not. Legacy untagged contact fixtures still pass.
+
+### Product browser checks
+
+`scripts/verify-tree-browser.mjs` passed in production Edge 156 at **1440×1000** and **390×844**. Results are saved in `research/tree-browser-verification.json`; only synthetic letters were used.
+
+- Planted and selected all nine manual choices; exercised Surprise and Moonveil draft reload; IDs/seeds/species/positions/plots survived reload. Reduced-motion planting kept the growth clock paused.
+- Nine explicit species sharing one seed retained separate cached geometry. Paused mature spring/summer/autumn/winter switches retained mesh identity and geometry arrays. Winter leaves/flowers disappeared and produced **zero hidden-leaf ray hits**. Atmosphere and Seasonal island toggles restored the documented healthy neutral fallback and returned to the selected season.
+- Moonveil's measured emission attribute was approximately **.15 by day / .60 at night**; real trees remained zero. There are no new scene lights or extra tree draw calls. Desktop/mobile night captures are `screenshots/trees-moonveil-night-{1440,390}.png`.
+- Mature Moonveil and partial willow deletion retained species and their displayed organ set, colours and emission during a season switch, then completed. Plots remained and the next planting reused the vacancy. Reload preserved the result. Browser lifecycle freeze/resume, near/far zoom and recentering completed with no page/console errors or horizontal overflow.
+- A fresh source review found the omitted removal species and stale Three.js picking sphere; both have observed production RED→GREEN regressions. The final winter-to-spring test now hits newly visible outer foliage. Review details and the one recorded typed-facade minor finding are in `research/tree-review-2026-10-29.md`.
+- Product seasonal screenshots: `screenshots/trees-garden-{1440,390}-{spring,summer,autumn,winter}.png`. Zero/one-tree planting flows and the synthetic 49-plot legacy and Moonveil-mix fixtures were inspected; 49-tree reload checks preserve all letter and plot fields.
+
+### Performance evidence and limits
+
+Node **24.14.1**, production Edge **156**, same machine and saved 49-plot legacy fixture, paused mature trees, Summer/Day/Clear, Living details enabled. Each browser sample contains 300 animation-frame intervals. The baseline and every observed current/repeat result are retained in `research/tree-performance-baseline.json` and `research/tree-browser-performance-*.json`.
+
+| Measurement | Before checkpoint | Final implementation |
+| --- | ---: | ---: |
+| 49 legacy trees, seven-warm median generation | 455.47 ms | 485.10 ms (+6.5%) |
+| Generated voxels, same 49 seeds | 332,235 | 458,896 |
+| Draw calls | 57 | 57 |
+| Desktop frame interval p95, latest sample | 7.1 ms | 7.2 ms |
+| Desktop p95 range across three final samples | — | 7.2–13.9 ms |
+| Mobile frame interval p95 | 7.0 ms | 7.1 ms |
+| Desktop rendered triangles | 4,431,920 | 5,951,852 |
+
+The separate 49-tree mix including Moonveil generated in **450.36 ms** median, with 57 draws and measured p95 **13.9 ms desktop / 7.1 ms mobile**. Its different species mix is not treated as a baseline comparison.
+
+The first new-generation run took roughly 2.6 seconds for 49 trees. CPU profiling identified repeated raster/neighbor and organ-template work. Numeric spatial keys, cached/merged coplanar leaf and needle motifs and face-connected six-neighbor traversal removed that overhead while preserving the researched silhouettes. The final desktop p95 threshold triggered repeat investigation: some samples skipped refresh intervals, while another returned to 7.2 ms. Triangle count is higher; headless intervals alone do not isolate CPU, GPU and scheduling costs. All samples are retained rather than claiming a stable desktop speedup. Physical-device FPS/memory and prolonged interaction under mobile thermal limits remain unmeasured.
+
+### Reproduction
+
+Use Node 24 and the existing project dependencies. Run the unit/type/build commands above, then the deterministic `scripts/verify-trees.mjs --check` audit. `node --experimental-strip-types scripts/verify-trees.mjs --serve` serves the neutral geometry renderer at port 3105 and the actual reference board at `/board`.
+
+Optional browser verification uses an installed Playwright module and browser. Set `PLAYWRIGHT_MODULE` and `BROWSER_EXECUTABLE` for those verification tools if they are outside normal module/browser discovery; the app itself needs no environment variables. With the production app on port 3103, run `scripts/verify-tree-browser.mjs` and `scripts/measure-tree-browser.mjs after` / `mix`; with the study server running, run `scripts/capture-tree-studies.mjs`. Invoke these scripts with `node --experimental-strip-types`.

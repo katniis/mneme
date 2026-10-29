@@ -70,6 +70,7 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
       dummy.scale.setScalar(0); dummy.updateMatrix();
       data.forEach((v, i) => { mesh.current.setColorAt(i, color.set(v.color)); mesh.current.setMatrixAt(i, dummy.matrix); });
       mesh.current.instanceMatrix.needsUpdate = true;
+      mesh.current.boundingSphere = null;
     }
     if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
     if (effect && particles.current) {
@@ -115,6 +116,7 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
         particles.current.setMatrixAt(rank, dummy.matrix);
       });
       mesh.current.instanceMatrix.needsUpdate = true;
+      mesh.current.boundingSphere = null;
       particles.current.instanceMatrix.needsUpdate = true;
       return;
     }
@@ -140,6 +142,7 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
       mesh.current.setMatrixAt(i, dummy.matrix);
     });
     mesh.current.instanceMatrix.needsUpdate = true;
+    mesh.current.boundingSphere = null;
     if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
     emission.needsUpdate = true;
   });
@@ -149,7 +152,7 @@ export default function Tree({ tree, data, clock, selected, onSelect, removal, s
   };
   return (
     <group position={[tree.position[0], groundHeight(...tree.position), tree.position[1]]}>
-      <instancedMesh ref={mesh} args={[undefined, undefined, data.length]} castShadow receiveShadow frustumCulled={false}
+      <instancedMesh name={`tree:${tree.id}`} ref={mesh} args={[undefined, undefined, data.length]} castShadow receiveShadow frustumCulled={false}
         raycast={function (this: THREE.InstancedMesh, raycaster, hits) {
           const candidates: THREE.Intersection[] = [];
           THREE.InstancedMesh.prototype.raycast.call(this, raycaster, candidates);

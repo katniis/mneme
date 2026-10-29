@@ -33,6 +33,10 @@ test('flowers, needles, juvenile leaves and Moonveil emission follow their own c
   assert.equal(sampleTreeAppearance(flower, 'Cherry Blossom', 'spring', .64).scale, 0);
   assert.equal(sampleTreeAppearance(flower, 'Cherry Blossom', 'spring', 1).scale, 1);
   assert.equal(sampleTreeAppearance({ ...v, organ: 'juvenile-leaf' }, 'Oak', 'summer', .21).scale, 0);
+  assert.equal(sampleTreeAppearance({ ...v, organ: 'juvenile-leaf' }, 'Oak', 'winter', .1).scale, 0);
+  assert.equal(sampleTreeAppearance({ ...v, organ: 'juvenile-leaf' }, 'Oak', 'summer', .1).scale, 1);
+  const residual = Array.from({ length: 1000 }, (_, id) => sampleTreeAppearance({ ...flower, organId: id }, 'Jacaranda', 'summer').scale).reduce((a, b) => a + b, 0);
+  assert.ok(residual > 70 && residual < 130);
   for (const species of ['Pine', 'Spruce'] as const) assert.equal(sampleTreeAppearance({ ...v, organ: 'needle' }, species, 'winter').scale, 1);
   assert.notEqual(sampleTreeAppearance(v, 'Maple', 'summer').color, sampleTreeAppearance(v, 'Maple', 'autumn').color);
   assert.equal(sampleTreeAppearance({ ...v, emissive: .6 }, 'Oak', 'winter').emissive, 0);

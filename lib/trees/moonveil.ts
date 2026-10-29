@@ -15,7 +15,7 @@ export function buildMoonveilSkeleton(seed: number) {
       for (let f = 0; f < 9; f++) {
         const theta = angle + (f - 4) * .29;
         const tip = path(arm, [Math.cos(theta) * reach, y + .12 + rng() * .18, Math.sin(theta) * reach], .014, 'twig', 3, .12);
-        dress(tip, theta, 4);
+        dress(tip, theta, 12);
         if (f % 2 === 0) {
           const p = skeleton.nodes[tip].position;
           const hanging = path(tip, [p[0], p[1] - .35 - rng() * .25, p[2]], .012, 'twig', 2);

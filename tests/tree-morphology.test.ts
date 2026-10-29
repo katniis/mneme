@@ -42,12 +42,63 @@ test('Moonveil has connected twisting stems, offset crowns and attached glowing 
   for (let seed = 0; seed < 8; seed++) assert.ok(generateTree(seed).every(v => !v.emissive));
 });
 
+test('budgeted oak foliage reaches the crown and willow carries leaves above its curtains', () => {
+  for (const seed of [0, 8, 16, 4, 12, 20]) {
+    const tree = generateTree(seed), h = Math.max(...tree.map(v => v.position[1]));
+    const leaves = tree.filter(v => v.organ === 'leaf');
+    assert.ok(leaves.some(v => v.position[1] > h * .94), `seed ${seed} has a bare crown`);
+    if (seed % 8 === 0) assert.ok(Math.min(...leaves.map(v => v.position[1])) < h * .6, 'oak has a deep rounded crown');
+  }
+});
+
+test('jacaranda fronds subdivide into fine paired leaflets on separate pinna rachises', () => {
+  const tree = generateTree(6), leaf = tree.find(v => v.organ === 'leaf')!;
+  const frond = tree.filter(v => v.organId === leaf.organId);
+  assert.ok(frond.some(v => v.size[0] < .025 && v.size[2] > .04), 'tiny paired leaflets');
+  assert.ok(frond.some(v => v.size[0] > .1), 'transverse pinna rachises');
+  assert.ok(frond.some(v => v.size[2] > .3), 'main frond rachis');
+});
+
+test('oak leaves occupy multiple points along shoots instead of gathering at terminal knots', () => {
+  const tree = generateTree(0), leaves = tree.filter(v => v.organ === 'leaf' && tree[v.parent]?.kind === 'wood');
+  assert.ok(new Set(leaves.map(v => v.parent)).size > leaves.length * .4);
+});
+
+test('broadleaf scaffolds preserve a stout oak bole and opposite maple leaf attachment', () => {
+  const bole = (seed: number) => generateTree(seed).filter(v => v.kind === 'wood' && Math.abs(v.position[1] - .52) < .001).length;
+  assert.ok(bole(0) > bole(1) && bole(0) > bole(2));
+  const sites = buildBroadleafSkeleton(2, 'Maple').sites;
+  for (const site of sites) assert.ok(sites.some(other => other !== site && other.node === site.node && other.along === site.along
+    && Math.abs(other.direction[0] + site.direction[0]) < 1e-8 && Math.abs(other.direction[2] + site.direction[2]) < 1e-8));
+});
+
+test('pine needles occur in pairs while spruce needles surround tapering shoots', () => {
+  for (const seed of [5, 13, 21, 7, 15, 23]) {
+    const tree = generateTree(seed), needles = tree.filter(v => v.organ === 'needle'), groups = new Map<number, number>();
+    for (const v of needles) groups.set(v.organId!, (groups.get(v.organId!) ?? 0) + 1);
+    assert.ok([...groups.values()].every(n => n === (seed % 8 === 5 ? 2 : 5)));
+    if (seed % 8 === 7) {
+      const h = Math.max(...tree.map(v => v.position[1])), radius = (low: number, high: number) => Math.max(...needles.filter(v => v.position[1] > h * low && v.position[1] < h * high).map(v => Math.hypot(v.position[0], v.position[2])));
+      assert.ok(radius(.2, .5) > radius(.75, 1));
+    }
+  }
+});
+
 test('colonization ends for unreachable and coincident attractors without mutating its input', () => {
   const skeleton = buildBroadleafSkeleton(0, 'Oak'), before = JSON.stringify(skeleton);
   for (const points of [[], [[100, 100, 100]], [skeleton.nodes[0].position]]) {
     const result = colonize(0, skeleton, points as [number, number, number][]);
     assert.ok(result.nodes.length <= 512); assert.equal(JSON.stringify(skeleton), before);
   }
+});
+
+test('a crown with cancelling attraction directions stops when no shoot can advance', () => {
+  let reads = 0;
+  const points = [-1, 1].map(side => new Proxy([side * Math.sqrt(1 - .06 ** 2), -.02, 0], {
+    get(target, property, receiver) { if (['0', '1', '2'].includes(String(property))) reads++; return Reflect.get(target, property, receiver); },
+  }) as [number, number, number]);
+  const result = colonize(0, { nodes: [{ position: [0, .04, 0], parent: -1, radius: .02, organ: 'root', order: 0 }], sites: [] }, points);
+  assert.equal(result.nodes.length, 1); assert.ok(reads < 100, `no-progress crown re-read its attractors ${reads} times`);
 });
 
 for (const [species, seeds] of [['Cherry Blossom', [3, 11, 19]], ['Jacaranda', [6, 14, 22]]] as const) {

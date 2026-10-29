@@ -71,3 +71,11 @@ test('hanging willow twigs do not prevent the structural tree from falling', () 
     assert.ok(removal.restAngle(blocks, tree.position, direction, groundHeight) > .5, `willow ${seed} must visibly fall`);
   }
 });
+
+test('small tagged structural cubes support the fall while fruit cannot stop it', () => {
+  const branch: removal.FrozenBlock = { sourceIndex: 0, position: [0, 2, 0], size: [.0808, .0808, .0808], rotation: [0, 0, 0], color: '#765432', kind: 'wood', organ: 'branch' };
+  const angle = removal.restAngle([branch], [0, 0], 0, () => 0);
+  assert.ok(angle > 1 && angle < Math.PI / 2);
+  const fruit: removal.FrozenBlock = { ...branch, position: [0, .35, 4], organ: 'fruit' };
+  assert.equal(removal.restAngle([branch, fruit], [0, 0], 0, () => 0), angle);
+});

@@ -7,6 +7,6 @@ export type Voxel = {
   rotation?: Vec3; organ?: Organ; organId?: number; emissive?: number;
 };
 export type SkeletonNode = { position: Vec3; parent: number; radius: number; organ: WoodOrgan; order: number };
-export type OrganSite = { node: number; direction: Vec3; organ: Exclude<Organ, WoodOrgan>; organId: number };
+export type OrganSite = { node: number; along?: number; direction: Vec3; organ: Exclude<Organ, WoodOrgan>; organId: number };
 export type TreeSkeleton = { nodes: SkeletonNode[]; sites: OrganSite[] };
 export type VoxelAppearance = { scale: number; color: string; emissive: number };

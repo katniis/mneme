@@ -1,0 +1,327 @@
+{
+  "node": "v24.14.1",
+  "cases": [
+    {
+      "species": "Oak",
+      "seed": 0,
+      "voxels": 11995,
+      "nodes": 329,
+      "wood": 5803,
+      "height": 6.264555469956391,
+      "crownRatio": 1.0307885124501595,
+      "generationMs": 109.34470000000002,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/quercus-robur"
+    },
+    {
+      "species": "Oak",
+      "seed": 8,
+      "voxels": 11999,
+      "nodes": 328,
+      "wood": 5703,
+      "height": 6.252229008367075,
+      "crownRatio": 1.0165047802199731,
+      "generationMs": 73.18039999999996,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/quercus-robur"
+    },
+    {
+      "species": "Oak",
+      "seed": 16,
+      "voxels": 11994,
+      "nodes": 331,
+      "wood": 5882,
+      "height": 6.424764550480102,
+      "crownRatio": 1.0112888367034372,
+      "generationMs": 28.500499999999988,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/quercus-robur"
+    },
+    {
+      "species": "Birch",
+      "seed": 1,
+      "voxels": 6658,
+      "nodes": 253,
+      "wood": 3598,
+      "height": 6.967093196076456,
+      "crownRatio": 0.4634204741074917,
+      "generationMs": 60.11340000000007,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/betula-pendula"
+    },
+    {
+      "species": "Birch",
+      "seed": 9,
+      "voxels": 6551,
+      "nodes": 253,
+      "wood": 3491,
+      "height": 6.732686871210816,
+      "crownRatio": 0.48461158056650533,
+      "generationMs": 14.283899999999903,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/betula-pendula"
+    },
+    {
+      "species": "Birch",
+      "seed": 17,
+      "voxels": 6661,
+      "nodes": 253,
+      "wood": 3601,
+      "height": 6.9604,
+      "crownRatio": 0.4721403650774116,
+      "generationMs": 9.807600000000093,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/betula-pendula"
+    },
+    {
+      "species": "Maple",
+      "seed": 2,
+      "voxels": 8990,
+      "nodes": 316,
+      "wood": 2996,
+      "height": 4.588680551034234,
+      "crownRatio": 1.1146568217277177,
+      "generationMs": 7.8728000000000975,
+      "reference": "https://plants.ces.ncsu.edu/plants/acer-palmatum/"
+    },
+    {
+      "species": "Maple",
+      "seed": 10,
+      "voxels": 8947,
+      "nodes": 316,
+      "wood": 2899,
+      "height": 4.497051642111239,
+      "crownRatio": 1.1409282566156131,
+      "generationMs": 27.093900000000076,
+      "reference": "https://plants.ces.ncsu.edu/plants/acer-palmatum/"
+    },
+    {
+      "species": "Maple",
+      "seed": 18,
+      "voxels": 8967,
+      "nodes": 316,
+      "wood": 2901,
+      "height": 4.509398857180464,
+      "crownRatio": 1.085942381448174,
+      "generationMs": 10.088899999999967,
+      "reference": "https://plants.ces.ncsu.edu/plants/acer-palmatum/"
+    },
+    {
+      "species": "Cherry Blossom",
+      "seed": 3,
+      "voxels": 8174,
+      "nodes": 216,
+      "wood": 3020,
+      "height": 5.229356548121009,
+      "crownRatio": 0.9960588115587908,
+      "generationMs": 30.35889999999995,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/prunus-serrulata-kanzan"
+    },
+    {
+      "species": "Cherry Blossom",
+      "seed": 11,
+      "voxels": 8126,
+      "nodes": 216,
+      "wood": 2972,
+      "height": 5.1822885562999454,
+      "crownRatio": 0.9973472026604989,
+      "generationMs": 9.51240000000007,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/prunus-serrulata-kanzan"
+    },
+    {
+      "species": "Cherry Blossom",
+      "seed": 19,
+      "voxels": 8026,
+      "nodes": 216,
+      "wood": 2842,
+      "height": 5.0237364786358905,
+      "crownRatio": 1.0012867945385804,
+      "generationMs": 8.647500000000036,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/prunus-serrulata-kanzan"
+    },
+    {
+      "species": "Weeping Willow",
+      "seed": 4,
+      "voxels": 11267,
+      "nodes": 430,
+      "wood": 7613,
+      "height": 6.1289131035215245,
+      "crownRatio": 1.1268400547977924,
+      "generationMs": 21.970800000000054,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/salix-babylonica"
+    },
+    {
+      "species": "Weeping Willow",
+      "seed": 12,
+      "voxels": 10959,
+      "nodes": 430,
+      "wood": 7305,
+      "height": 5.886912752910336,
+      "crownRatio": 1.11881645115586,
+      "generationMs": 13.417200000000093,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/salix-babylonica"
+    },
+    {
+      "species": "Weeping Willow",
+      "seed": 20,
+      "voxels": 11130,
+      "nodes": 430,
+      "wood": 7476,
+      "height": 6.0569039152191175,
+      "crownRatio": 1.1135865099756526,
+      "generationMs": 13.228000000000065,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/salix-babylonica"
+    },
+    {
+      "species": "Pine",
+      "seed": 5,
+      "voxels": 5494,
+      "nodes": 235,
+      "wood": 3052,
+      "height": 7.5638291553201915,
+      "crownRatio": 0.6349727986101728,
+      "generationMs": 33.45749999999998,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/pinus-sylvestris"
+    },
+    {
+      "species": "Pine",
+      "seed": 13,
+      "voxels": 5466,
+      "nodes": 235,
+      "wood": 3024,
+      "height": 7.4945313524822765,
+      "crownRatio": 0.6076405784287039,
+      "generationMs": 10.178000000000338,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/pinus-sylvestris"
+    },
+    {
+      "species": "Pine",
+      "seed": 21,
+      "voxels": 5366,
+      "nodes": 235,
+      "wood": 2938,
+      "height": 7.3604,
+      "crownRatio": 0.6240707755315297,
+      "generationMs": 8.551100000000133,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/pinus-sylvestris"
+    },
+    {
+      "species": "Jacaranda",
+      "seed": 6,
+      "voxels": 11987,
+      "nodes": 216,
+      "wood": 3619,
+      "height": 6.491111100148436,
+      "crownRatio": 0.9591583829226973,
+      "generationMs": 9.485499999999774,
+      "reference": "https://plants.ces.ncsu.edu/plants/jacaranda-mimosifolia/"
+    },
+    {
+      "species": "Jacaranda",
+      "seed": 14,
+      "voxels": 11996,
+      "nodes": 216,
+      "wood": 3619,
+      "height": 6.40628788662864,
+      "crownRatio": 0.9545654125649934,
+      "generationMs": 6.635200000000168,
+      "reference": "https://plants.ces.ncsu.edu/plants/jacaranda-mimosifolia/"
+    },
+    {
+      "species": "Jacaranda",
+      "seed": 22,
+      "voxels": 11987,
+      "nodes": 216,
+      "wood": 3610,
+      "height": 6.495469369996763,
+      "crownRatio": 0.9311168116984411,
+      "generationMs": 6.058799999999792,
+      "reference": "https://plants.ces.ncsu.edu/plants/jacaranda-mimosifolia/"
+    },
+    {
+      "species": "Spruce",
+      "seed": 7,
+      "voxels": 10208,
+      "nodes": 372,
+      "wood": 3708,
+      "height": 7.602597050555893,
+      "crownRatio": 0.40150537171363726,
+      "generationMs": 16.60880000000043,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/picea-abies"
+    },
+    {
+      "species": "Spruce",
+      "seed": 15,
+      "voxels": 10250,
+      "nodes": 372,
+      "wood": 3810,
+      "height": 7.770483710660038,
+      "crownRatio": 0.3932879222109513,
+      "generationMs": 19.429699999999684,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/picea-abies"
+    },
+    {
+      "species": "Spruce",
+      "seed": 23,
+      "voxels": 10220,
+      "nodes": 372,
+      "wood": 3740,
+      "height": 7.603157620337352,
+      "crownRatio": 0.4012681214557333,
+      "generationMs": 24.211899999999787,
+      "reference": "https://landscapeplants.oregonstate.edu/plants/picea-abies"
+    },
+    {
+      "species": "Moonveil",
+      "seed": 100,
+      "voxels": 6308,
+      "nodes": 259,
+      "wood": 3093,
+      "height": 6.8979169308429205,
+      "crownRatio": 0.8029958652986265,
+      "generationMs": 12.529899999999998,
+      "reference": null
+    },
+    {
+      "species": "Moonveil",
+      "seed": 200,
+      "voxels": 6394,
+      "nodes": 259,
+      "wood": 3104,
+      "height": 7.0179638131955295,
+      "crownRatio": 0.7875886970624323,
+      "generationMs": 7.379699999999957,
+      "reference": null
+    },
+    {
+      "species": "Moonveil",
+      "seed": 300,
+      "voxels": 6422,
+      "nodes": 259,
+      "wood": 3207,
+      "height": 7.212628723093035,
+      "crownRatio": 0.7981332305228754,
+      "generationMs": 13.69360000000006,
+      "reference": null
+    }
+  ],
+  "legacy49": {
+    "runs": [
+      458.5517,
+      451.4894999999997,
+      484.08140000000003,
+      536.1729999999998,
+      530.6031000000003,
+      537.5355999999992,
+      485.09879999999976
+    ],
+    "medianMs": 485.09879999999976,
+    "voxels": 458896
+  },
+  "moonveilMix49": {
+    "runs": [
+      446.28739999999925,
+      450.3602000000001,
+      443.9417000000003,
+      588.2048999999988,
+      462.40159999999923,
+      508.943299999999,
+      418.28619999999864
+    ],
+    "medianMs": 450.3602000000001
+  }
+}

@@ -1,0 +1,83 @@
+[
+  {
+    "width": 1440,
+    "height": 1000,
+    "plantNine": true,
+    "surpriseChoice": true,
+    "moonveilDraftReload": true,
+    "reloadIdentity": true,
+    "selectionNine": true,
+    "reducedMotionPaused": true,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "plantNine": true,
+    "surpriseChoice": true,
+    "moonveilDraftReload": true,
+    "reloadIdentity": true,
+    "selectionNine": true,
+    "reducedMotionPaused": true,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "height": 1000,
+    "sameSeedNineCaches": true,
+    "pausedSeasonSwitches": true,
+    "environmentToggles": true,
+    "hiddenLeafRayHits": 0,
+    "moonveilDayEmission": 0.15000000596046448,
+    "moonveilNightEmission": 0.6000000238418579,
+    "matureDeletion": {
+      "species": "Moonveil",
+      "visible": 6298,
+      "snapshotRetained": true
+    },
+    "partialDeletion": {
+      "species": "Weeping Willow",
+      "visible": 5757,
+      "snapshotRetained": true
+    },
+    "retainedPlots": true,
+    "reusedVacancy": true,
+    "reload": true,
+    "lifecycleEmulation": true,
+    "nearFarZoom": true,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "sameSeedNineCaches": true,
+    "pausedSeasonSwitches": true,
+    "environmentToggles": true,
+    "hiddenLeafRayHits": 0,
+    "moonveilDayEmission": 0.15000000596046448,
+    "moonveilNightEmission": 0.6000000238418579,
+    "matureDeletion": {
+      "species": "Moonveil",
+      "visible": 6298,
+      "snapshotRetained": true
+    },
+    "partialDeletion": {
+      "species": "Weeping Willow",
+      "visible": 5757,
+      "snapshotRetained": true
+    },
+    "retainedPlots": true,
+    "reusedVacancy": true,
+    "reload": true,
+    "lifecycleEmulation": true,
+    "nearFarZoom": true,
+    "errors": []
+  },
+  {
+    "winterToSpringPicking": {
+      "outside": 3,
+      "target": 11330,
+      "hits": 1
+    }
+  }
+]

@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Actual voxel geometry studies</title>
+<style>body{margin:0;background:#f1f1e9;color:#26372d;font:14px system-ui}header{position:absolute;top:22px;left:28px}h1{margin:0;font:28px Georgia}p{margin:5px 0;color:#5e695d}#labels{position:absolute;top:90px;width:100%;display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:800px 800px;text-align:center;font-size:13px}canvas{display:block}</style>
+<header><h1 id="title">Actual generated voxel geometry</h1><p id="subtitle">Fixed orthographic studies · product lighting checked separately</p></header><div id="labels"></div>
+<script type="module">
+import * as T from '/three.module.js';
+const renderer = new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); renderer.setSize(1600,1700); renderer.setPixelRatio(1); renderer.setClearColor('#f1f1e9'); document.body.append(renderer.domElement);
+const scene=new T.Scene(), camera=new T.OrthographicCamera(-4.9,4.9,9.8,-9.8,.1,100); scene.add(new T.HemisphereLight('#ffffff','#928d78',2.3));const sun=new T.DirectionalLight('#fff6df',3);sun.position.set(-5,12,8);scene.add(sun);
+const box=new T.BoxGeometry(), material=new T.MeshStandardMaterial({roughness:1}), dummy=new T.Object3D(), color=new T.Color(); let mesh;
+window.renderStudy=async function(species,seed,mode='structure',appearances=null){
+  const data=await fetch('/specimen?species='+encodeURIComponent(species)+'&seed='+seed).then(r=>r.json());
+  if(mesh){scene.remove(mesh);mesh.dispose()}mesh=new T.InstancedMesh(box,material,data.length);mesh.frustumCulled=false;scene.add(mesh);
+  document.querySelector('#title').textContent=species+' · seed '+seed;
+  const labels=mode==='seasons'?['Spring','Summer','Autumn','Winter']:mode==='growth'?['Growth .05','Growth .25','Growth .60','Mature']:mode==='close'?['Leaf / flower motif','Bark and lower bole','Crown detail','Side crown detail']:['Front colour','Side colour','Silhouette','Bare structure'];document.querySelector('#labels').innerHTML=labels.map(x=>'<span>'+x+'</span>').join('');
+  renderer.setScissorTest(true);
+  for(let panel=0;panel<4;panel++){
+    const growth=mode==='growth'?[.05,.25,.6,1][panel]:1;
+    data.forEach((v,i)=>{let g=Math.max(0,Math.min(1,(growth-v.start)/(v.end-v.start)));g=g*g*(3-2*g);const appearance=appearances?.[panel]?.[i];if(appearance)g*=appearance.scale;else if(v.organ==='juvenile-leaf'&&growth>.2)g=0;
+      if(mode==='structure'&&panel===3&&!['root','trunk','branch','twig'].includes(v.organ))g=0;
+      dummy.position.set(...v.position.map((x,a)=>v.anchor[a]+(x-v.anchor[a])*g));dummy.rotation.set(...(v.rotation||[0,0,0]));dummy.scale.set(...v.size.map(x=>x*g));dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);mesh.setColorAt(i,color.set(mode==='structure'&&panel===2?'#26372d':appearance?.color||v.color));});mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;
+    const side=panel===1&&mode==='structure'||mode==='close'&&panel===3;
+    camera.left=-4.9;camera.right=4.9;camera.top=4.9;camera.bottom=-4.9;
+    const center=new T.Vector3(0,4.25,0);camera.position.set(side?18:0,6.5,side?0:18);
+    if(mode==='close'){
+      let target;if(panel===1)target=[0,1.1,0];else{const leaves=data.filter(v=>['leaf','needle','blossom'].includes(v.organ));target=leaves[Math.floor(leaves.length*(panel===0?.35:.7))].position}
+      center.fromArray(target);camera.position.copy(center).add(new T.Vector3(side?4:2,1,side?2:4));camera.left=-.85;camera.right=.85;camera.top=.85;camera.bottom=-.85;
+    }
+    camera.lookAt(center);camera.updateProjectionMatrix();renderer.setViewport((panel%2)*800,(1-Math.floor(panel/2))*800,800,800);renderer.setScissor((panel%2)*800,(1-Math.floor(panel/2))*800,800,800);renderer.render(scene,camera);
+  }
+  renderer.setScissorTest(false);return data.length;
+};window.studyReady=true;
+</script></html>

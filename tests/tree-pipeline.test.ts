@@ -33,3 +33,11 @@ test('an organ is omitted whole at the voxel ceiling rather than severing its su
   assert.equal(wood.length, 11999); assert.ok(!wood.some(v => v.organId === 20));
 });
 
+test('tilted wood paths keep face contacts instead of balancing on voxel corners', () => {
+  const tree = voxelizeTree({ ...skeleton, sites: [] }, 0, 'Oak');
+  for (const v of tree) if (v.parent >= 0 && v.kind === 'wood') {
+    const parent = tree[v.parent];
+    assert.ok(Math.abs(v.position.reduce((sum, n, a) => sum + Math.abs(n - parent.position[a]), 0) - .08) < 1e-8);
+  }
+});
+
