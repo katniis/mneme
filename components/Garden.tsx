@@ -470,6 +470,17 @@ export default function Garden() {
 						<Icon name="info" />
 					</button>
 				</div>
+        <button
+          type="button"
+          className={`${styles.iconButton} ${styles.soundtrackButton}`}
+          onClick={() => sound.setMuted(!sound.muted)}
+          disabled={!sound.available}
+          aria-label={sound.muted ? 'Unmute soundtrack' : 'Mute soundtrack'}
+          aria-pressed={sound.muted}
+          title={(ready && sound.status) || (sound.muted ? 'Unmute soundtrack' : 'Mute soundtrack')}
+        >
+          <Icon name={sound.muted ? 'muted' : 'volume'} />
+        </button>
 				{ready && !sceneReady && webgl && (
 					<div className={styles.loading} role="status">
 						Finding a quiet place…

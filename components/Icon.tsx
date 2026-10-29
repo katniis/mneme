@@ -43,6 +43,8 @@ export default function Icon({
 				<path d="M8 5v14M16 5v14" strokeWidth="3" />
 			</>
 		),
+    volume: <><path d="m11 4-6 5H2v6h3l6 5V4Z" /><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /></>,
+    muted: <><path d="m11 4-6 5H2v6h3l6 5V4Z" /><path d="m16 9 6 6m0-6-6 6" /></>,
 		recenter: (
 			<>
 				<path d="M4 9V4h5m6 0h5v5m0 6v5h-5M9 20H4v-5" />

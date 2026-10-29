@@ -37,7 +37,7 @@ Keep generation and resolver logic in `lib/`, rendering in scene components, and
 - Migrate preferences through the existing readers and stable storage keys without touching letters. Legacy Cloudy becomes Clear; provider cloud cover still affects lighting. The scene uses procedural sky/lighting and stars, with no cloud geometry or sun/moon models.
 - Keep moving particle pools bounded on desktop and mobile. Reduced motion hides moving decoration and precipitation while retaining static lighting/ground cover; hidden tabs pause animation without catch-up.
 - Request location only through an explicit setup action. Weather requests require a configured location and demand from active effects; send approximate coordinates or city searches to Open-Meteo, never letter content. Clearing location also clears its weather cache.
-- Nature sounds starts Off each load and persists only volume. Create/resume audio from an explicit user gesture, bound voices and scheduling, fade transitions, pause on hidden tabs/master-off/WebGL loss, and close resources on Off/unmount. Reduced motion and Living details do not control sound. Generate sounds locally with Web Audio.
+- Request soundtrack autoplay on startup and retry suspended audio on a pointer or keyboard gesture when browser policy blocks it. The bottom-right mute button controls only the soundtrack; generated bird/insect calls play independently without their own toggle. Start each load unmuted at the default mix volume. Bound voices and scheduling, fade transitions, pause on hidden tabs/master-off/WebGL loss, and close resources on unmount. Reduced motion and Living details do not control sound.
 
 ## Testing Guidelines
 

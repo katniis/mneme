@@ -27,6 +27,8 @@
 .sceneTools { position: absolute; right: 24px; top: 24px; display: flex; gap: 7px; }
 .iconButton { border: 1px solid #d3ddcb; background: #f7f9f1; border-radius: 6px; width: 38px; height: 38px; display: grid; place-items: center; color: #576d51; transition: background .15s; }
 .iconButton:hover { background: #fff; }
+.iconButton:disabled { opacity: .45; cursor: default; }
+.soundtrackButton { position: absolute; right: 24px; bottom: 40px; z-index: 1; }
 .empty { position: absolute; left: 37px; bottom: 35px; width: 270px; }
 .emptyIcon { color: #6f8555; display: block; margin-bottom: 12px; }
 .empty h2 { font-size: 23px; letter-spacing: -.65px; font-weight: 500; line-height: 1.3; margin: 0 0 10px; }
@@ -124,7 +126,7 @@
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @keyframes panelIn { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 @media (min-width: 1600px) { .header { height: 100px; } .world { max-height: 1200px; } .sceneHeading { top: 45px; left: 45px; } }
-@media (max-width: 1050px) { .header { gap: 40px; } .local { display: none; } .gardenNote { bottom: 125px; max-width: 190px; } .empty { width: 225px; } .sceneHeading h1 { font-size: 28px; } .footerEnd { display: none !important; } .timeControl { left: auto; right: 24px; transform: none; width: 300px; } .gestures { left: auto; right: 24px; transform: none; width: 300px; justify-content: center; } }
+@media (max-width: 1050px) { .header { gap: 40px; } .local { display: none; } .gardenNote { bottom: 125px; max-width: 190px; } .empty { width: 225px; } .sceneHeading h1 { font-size: 28px; } .footerEnd { display: none !important; } .timeControl { left: auto; right: 72px; transform: none; width: 300px; } .gestures { left: auto; right: 72px; transform: none; width: 300px; justify-content: center; } }
 @media (max-width: 700px) {
   .app { padding: 0 10px; min-height: 640px; }
   .header { height: 73px; gap: 18px; flex-wrap: nowrap; }
@@ -150,7 +152,11 @@
   .empty p { display: none; }
   .textButton { font-size: 12px; }
   .gestures { bottom: 100px; font-size: 11px; left: 50%; right: auto; transform: translateX(-50%); width: auto; }
-  .timeControl { width: calc(100% - 36px); max-width: 340px; bottom: 18px; padding: 12px 14px; left: 50%; right: auto; transform: translateX(-50%); }
+  .timeControl { width: calc(100% - 36px); max-width: 340px; bottom: 18px; padding: 12px 52px 12px 10px; gap: 8px; left: 50%; right: auto; transform: translateX(-50%); }
+  .soundtrackButton { right: max(30px, calc((100% - 340px) / 2 + 12px)); bottom: 30px; }
+  .playButton { width: 33px; height: 33px; flex-shrink: 0; }
+  .speed { padding-left: 8px; }
+  .speed select { width: 58px; }
   .gardenNote { bottom: 123px; left: 22px; max-width: 240px; }
   .gardenNote strong { font-size: 13px; }
   .gardenNote span { font-size: 12px; }

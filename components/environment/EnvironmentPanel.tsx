@@ -73,11 +73,8 @@ export default function EnvironmentPanel({ controller: c, sound }: { controller:
       <button className={styles.reset} type="button" onClick={() => c.updatePrefs({ timeMode: 'local', seasonMode: 'local', weatherMode: 'local' })}>Reset to automatic</button>
     </div>
     <div className={styles.sound}>
-      <Switch label="Nature sounds" checked={sound.enabled} disabled={!sound.enabled && !sound.available} onChange={enabled => { void sound.setEnabled(enabled); }} />
-      {sound.enabled ? <label className={styles.volume}>Volume <output>{Math.round(sound.volume * 100)}%</output><input type="range" aria-label="Nature sound volume" min="0" max="100" step="1" value={Math.round(sound.volume * 100)} onChange={e => sound.setVolume(Number(e.target.value) / 100)} /></label> : <p className={styles.caption}>Seasonal music, birdsong, and quiet insect calls.</p>}
       <p className={styles.attribution}><a href={track.sourceUrl} target="_blank" rel="noreferrer">{track.title}</a> by {track.artist} · <a href={track.licenseUrl} target="_blank" rel="noreferrer">CC BY 4.0</a></p>
       {sound.status && <p role="status">{sound.status}</p>}
-      {sound.enabled && (!sound.active || sound.status.startsWith('Seasonal music')) && sound.available && <button type="button" onClick={() => { void sound.resume(); }}>Resume sound</button>}
     </div>
     <p className={styles.status}>Time zone · <strong>{c.zone.replaceAll('_', ' ')}</strong><br />{!available ? 'Turn on atmosphere to change your surroundings.' : !c.weatherNeeded ? 'Automatic weather updates are paused.' : c.frame.weatherStatus === 'fresh' ? 'Weather is up to date.' : 'Auto uses your clock. Add a location for seasons and weather.'}</p>
     <h3>Weather location</h3>

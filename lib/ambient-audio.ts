@@ -4,6 +4,7 @@ export type SoundscapeEngine = {
   setTrack(buffer: AudioBuffer, at: number): void;
   setProfile(profile: SoundscapeProfile, at: number): void;
   setVolume(volume: number, at: number, seconds: number): void;
+  setMusicMuted(muted: boolean, at: number): void;
   schedule(events: readonly SoundEvent[], windowStart: number): void;
   clearCalls(at: number): void;
   dispose(): void;
@@ -19,11 +20,12 @@ function ramp(param: AudioParam, value: number, at: number, seconds: number) {
 export function createSoundscape(context: BaseAudioContext): SoundscapeEngine {
   const nodes: AudioNode[] = [], sources: (AudioBufferSourceNode | OscillatorNode)[] = [];
   const gain = () => { const node = context.createGain(); nodes.push(node); node.gain.value = 0; return node; };
-  const master = gain(), birds = gain(), insects = gain();
+  const master = gain(), birds = gain(), insects = gain(), musicBus = gain();
+  musicBus.gain.value = 1;
   const compressor = context.createDynamicsCompressor(); nodes.push(compressor);
   compressor.threshold.value = -18; compressor.knee.value = 12; compressor.ratio.value = 4; compressor.attack.value = .02; compressor.release.value = .3;
   master.connect(compressor); compressor.connect(context.destination);
-  birds.connect(master); insects.connect(master);
+  birds.connect(master); insects.connect(master); musicBus.connect(master);
   const voices = Array.from({ length: 4 }, (_, i) => {
     const oscillator = context.createOscillator(), envelope = gain(), pan = context.createStereoPanner();
     oscillator.type = 'sine'; oscillator.frequency.value = i < 2 ? 2400 : 4200;
@@ -41,7 +43,7 @@ export function createSoundscape(context: BaseAudioContext): SoundscapeEngine {
   const startMusic = (buffer: AudioBuffer, at: number) => {
     const source = context.createBufferSource(), envelope = context.createGain();
     const overlap = Math.min(4, buffer.duration / 2), end = at + buffer.duration;
-    source.buffer = buffer; source.connect(envelope); envelope.connect(master);
+    source.buffer = buffer; source.connect(envelope); envelope.connect(musicBus);
     envelope.gain.setValueAtTime(0, at); envelope.gain.linearRampToValueAtTime(.35, at + overlap);
     envelope.gain.setValueAtTime(.35, end - overlap); envelope.gain.linearRampToValueAtTime(0, end);
     const entry: Music = { source, gain: envelope, start: at, generation };
@@ -81,6 +83,7 @@ export function createSoundscape(context: BaseAudioContext): SoundscapeEngine {
       voices.forEach((voice, i) => { if ((i < 2 ? profile.birds : profile.insects) === 0) clearVoice(voice, at); });
     },
     setVolume(volume, at, seconds) { if (!disposed) ramp(master.gain, .18 * Math.max(0, Math.min(1, volume)), at, seconds); },
+    setMusicMuted(muted, at) { if (!disposed) ramp(musicBus.gain, muted ? 0 : 1, at, .15); },
     schedule(events, windowStart) {
       if (disposed) return;
       for (const event of events) {

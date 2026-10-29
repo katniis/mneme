@@ -363,3 +363,11 @@ The first new-generation run took roughly 2.6 seconds for 49 trees. CPU profilin
 Use Node 24 and the existing project dependencies. Run the unit/type/build commands above, then the deterministic `scripts/verify-trees.mjs --check` audit. `node --experimental-strip-types scripts/verify-trees.mjs --serve` serves the neutral geometry renderer at port 3105 and the actual reference board at `/board`.
 
 Optional browser verification uses an installed Playwright module and browser. Set `PLAYWRIGHT_MODULE` and `BROWSER_EXECUTABLE` for those verification tools if they are outside normal module/browser discovery; the app itself needs no environment variables. With the production app on port 3103, run `scripts/verify-tree-browser.mjs` and `scripts/measure-tree-browser.mjs after` / `mix`; with the study server running, run `scripts/capture-tree-studies.mjs`. Invoke these scripts with `node --experimental-strip-types`.
+
+## Soundtrack mute and startup audio — 2026-10-29
+
+- Removed the combined Nature sounds toggle, volume slider and manual resume button from Environment settings; soundtrack attribution remains.
+- Added an accessible soundtrack-only mute/unmute icon button at the garden's bottom right, reusing the existing utility-button styling and reserving space beside the mobile clock controls.
+- Routed music through its own gain node. Muting music leaves generated bird/insect calls independent. Each load requests unmuted playback at the default mix volume; legacy saved volume is no longer used by this interface.
+- Startup requests AudioContext playback once the garden is available and preloads its seasonal track. When browser autoplay permission prevents playback, pointer/keyboard gestures retry resume. Existing hidden-tab, atmosphere-off, WebGL-loss and unmount resource handling is retained.
+- Source changes were reviewed directly. Per the user's explicit request, **tests, typecheck, build, Playwright, runtime listening and visual checks were not run** for this change. Earlier verification results above describe the preceding implementation.
