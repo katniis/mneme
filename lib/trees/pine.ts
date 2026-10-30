@@ -1,7 +1,7 @@
 import { anatomy } from './skeleton.ts';
 
-export function buildPineSkeleton(seed: number) {
-  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Pine');
+export function buildPineSkeleton(seed: number, identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Pine', identity);
   const phase = rng() * 6.28;
   const bole = path(0, [.15, h * .58, -.1], .13, 'trunk', 8);
   for (let b = 0; b < 6; b++) {

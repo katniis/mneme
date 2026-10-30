@@ -15,6 +15,7 @@ import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsType } from "three-stdlib";
 import { generateTree, treeFamily, type Voxel } from '../lib/tree';
+import { GENERATOR_VERSION, identityKey } from '../lib/meta-identity';
 import { generateTerrain, type Position, type TerrainVoxel } from '../lib/terrain';
 import { terrainColour, type EnvironmentFrame } from '../lib/environment';
 import EnvironmentSky from './environment/EnvironmentSky';
@@ -36,6 +37,7 @@ type Props = {
 	removal: Removal | null;
 	onRemovalComplete(id: string): void;
 	selected: string | null;
+	treeFocus: { id: string; n: number } | null;
 	onSelect: (id: string) => void;
 	recenter: number;
 	editing: boolean;
@@ -162,6 +164,7 @@ function CameraRig({
 	recenter,
 	editing,
 	onInteraction,
+	focusTarget,
 }: {
 	radius: number;
 	center: [number, number];
@@ -169,6 +172,7 @@ function CameraRig({
 	recenter: number;
 	editing: boolean;
 	onInteraction: () => void;
+	focusTarget?: { x: number; z: number; height: number; n: number } | null;
 }) {
 	const controls = useRef<OrbitControlsType>(null!);
 	const { camera, size } = useThree();
@@ -177,6 +181,17 @@ function CameraRig({
 		target: THREE.Vector3;
 	} | null>(null);
 	const first = useRef(true);
+	useEffect(() => {
+		if (!focusTarget || !controls.current) return;
+		const target = new THREE.Vector3(focusTarget.x, focusTarget.height * 0.45, focusTarget.z);
+		const dir = camera.position.clone().sub(controls.current.target);
+		if (dir.lengthSq() < 0.01) dir.set(1.05, 0.85, 1.3);
+		dir.normalize();
+		const distance = THREE.MathUtils.clamp(focusTarget.height * 2.4, radius * 2.1, radius * 8);
+		const position = target.clone().add(dir.multiplyScalar(distance));
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { camera.position.copy(position); controls.current.target.copy(target); controls.current.update(); return; }
+		destination.current = { position, target };
+	}, [focusTarget, camera, radius]);
 	useEffect(() => {
 		if (camera instanceof THREE.PerspectiveCamera) { camera.far = Math.max(200, radius * 24); camera.updateProjectionMatrix(); }
 		const mobile = size.width < 700;
@@ -273,13 +288,20 @@ function World(props: Props) {
 	const trees = useMemo(
 		() =>
 			(props.removal ? [...props.letters, props.removal.tree] : props.letters).map((letter) => {
-				const key = `${treeFamily(letter.seed, letter.species)}:${letter.seed}`;
+				const key = `${treeFamily(letter.seed, letter.species)}:${letter.seed}:${letter.identity ? identityKey(letter.identity) : 'seeded'}:${letter.generatorVersion ?? GENERATOR_VERSION}`;
                 if (!cache.current.has(key))
-					cache.current.set(key, generateTree(letter.seed, letter.species));
+					cache.current.set(key, generateTree(letter.seed, letter.species, letter.identity));
 				return { letter, data: cache.current.get(key)! };
 			}),
 		[props.letters, props.removal],
 	);
+	const focusTarget = useMemo(() => {
+		if (!props.treeFocus) return null;
+		const focused = trees.find((t) => t.letter.id === props.treeFocus!.id);
+		if (!focused) return null;
+		const top = Math.max(...focused.data.map((v) => v.position[1] + v.size[1] / 2));
+		return { x: focused.letter.position[0], z: focused.letter.position[1], height: top, n: props.treeFocus.n };
+	}, [props.treeFocus, trees]);
 	const height = useMemo(
 		() =>
 			Math.max(
@@ -293,10 +315,10 @@ function World(props: Props) {
 		[trees],
 	);
   const sources = useMemo(() => leafSources(trees.filter(({ letter }) => letter.id !== props.removal?.tree.id).map(({ letter, data }) => ({
-    tree: { id: letter.id, seed: letter.seed, species: letter.species, position: letter.position, planted: letter.planted, reveal: letter.reveal }, voxels: data,
+    tree: { id: letter.id, seed: letter.seed, species: letter.species, identity: letter.identity, generatorVersion: letter.generatorVersion, position: letter.position, planted: letter.planted, reveal: letter.reveal }, voxels: data,
   }))), [trees, props.removal?.tree.id]);
 	useEffect(() => {
-		const seeds = new Set(trees.map(t => `${treeFamily(t.letter.seed, t.letter.species)}:${t.letter.seed}`));
+		const seeds = new Set(trees.map(t => `${treeFamily(t.letter.seed, t.letter.species)}:${t.letter.seed}:${t.letter.identity ? identityKey(t.letter.identity) : 'seeded'}:${t.letter.generatorVersion ?? GENERATOR_VERSION}`));
 		for (const seed of cache.current.keys()) if (!seeds.has(seed)) cache.current.delete(seed);
 	}, [trees]);
 	const positions = props.plots;
@@ -349,6 +371,7 @@ function World(props: Props) {
 			<CameraRig
 				{...extent}
 				height={height}
+				focusTarget={focusTarget}
 				recenter={props.recenter}
 				editing={props.editing}
 				onInteraction={props.onInteraction}

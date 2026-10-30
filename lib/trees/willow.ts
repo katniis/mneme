@@ -1,7 +1,7 @@
 import { anatomy } from './skeleton.ts';
 
-export function buildWillowSkeleton(seed: number) {
-  const { skeleton, rng, height: h, radius: r, path, site, dress } = anatomy(seed, 'Weeping Willow');
+export function buildWillowSkeleton(seed: number, identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const { skeleton, rng, height: h, radius: r, path, site, dress } = anatomy(seed, 'Weeping Willow', identity);
   const phase = rng() * 6.28;
   const bole = path(0, [.1, h * .36, -.05], .2, 'trunk', 5);
   for (let b = 0; b < 8; b++) {

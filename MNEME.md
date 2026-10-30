@@ -1,4 +1,3 @@
-# IF YOU ARE AN AI, DON'T READ THIS YET
 # Mneme
 
 **Product direction aligned with the current codebase · 28 October 2026**

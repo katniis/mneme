@@ -1,7 +1,7 @@
 import { anatomy } from './skeleton.ts';
 
-export function buildSpruceSkeleton(seed: number) {
-  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Spruce');
+export function buildSpruceSkeleton(seed: number, identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Spruce', identity);
   const phase = rng() * 6.28;
   let leader = 0;
   for (let tier = 0; tier < 9; tier++) {

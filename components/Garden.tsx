@@ -16,8 +16,10 @@ import {
 	validateLetter,
 	type Draft,
 	type GardenState,
+	type Letter,
 } from "../lib/garden";
-import { chooseTree, TREE_SPECIES, treeFamily } from '../lib/tree';
+import { chooseTree, seedForTree, TREE_SPECIES, treeFamily } from '../lib/tree';
+import { GENERATOR_VERSION, validateComparison, type BotanicalIdentity } from '../lib/meta-identity';
 import EnvironmentPanel from './environment/EnvironmentPanel';
 import { useEnvironment } from './environment/useEnvironment';
 import { useAmbientAudio } from './environment/useAmbientAudio';
@@ -46,6 +48,7 @@ export default function Garden() {
 	const [errors, setErrors] = useState<{ body?: string; date?: string }>({});
 	const [selected, setSelected] = useState<string | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+	const [resetConfirm, setResetConfirm] = useState(false);
 	const keepLetterButton = useRef<HTMLButtonElement>(null);
 	const [removal, setRemoval] = useState<Removal | null>(null);
 	const removalRef = useRef<Removal | null>(null);
@@ -70,6 +73,18 @@ export default function Garden() {
 		};
 	}, [removal, finishRemoval]);
 	const [recenter, setRecenter] = useState(0);
+	const [consentInterpret, setConsentInterpret] = useState(false);
+	const [suggestionBody, setSuggestionBody] = useState("");
+	const [treeFocus, setTreeFocus] = useState<{ id: string; n: number } | null>(null);
+	const [suggestion, setSuggestion] = useState<BotanicalIdentity | null>(null);
+	const [suggestionProvenance, setSuggestionProvenance] = useState<'live' | 'cached'>('live');
+	const [interpretState, setInterpretState] = useState<'idle' | 'loading' | 'error'>('idle');
+	const [interpretError, setInterpretError] = useState("");
+	const plantingRef = useRef(false);
+	const reflectionRef = useRef<HTMLTextAreaElement>(null);
+	const [reflectionDraft, setReflectionDraft] = useState("");
+	const [reflectionBusy, setReflectionBusy] = useState<'question' | 'compare' | null>(null);
+	const [reflectionError, setReflectionError] = useState("");
 	const [interacted, setInteracted] = useState(false);
 	const [toast, setToast] = useState("");
 	const [storageError, setStorageError] = useState("");
@@ -81,7 +96,18 @@ export default function Garden() {
 	const returnFocus = useRef<HTMLElement | null>(null);
 	const selectedLetter = garden.letters.find((l) => l.id === selected);
 	const notify = useCallback((message: string) => setToast(message), []);
-	useEffect(() => setDeleteTarget(null), [panel, selected]);
+	useEffect(() => { setDeleteTarget(null); setResetConfirm(false); }, [panel, selected]);
+	useEffect(() => {
+		setReflectionDraft(selectedLetter?.reflection ?? "");
+		setReflectionError("");
+		setReflectionBusy(null);
+	}, [selected]);
+	useEffect(() => {
+		const el = reflectionRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		el.style.height = `${el.scrollHeight}px`;
+	}, [reflectionDraft, panel, selected]);
 	useEffect(() => { if (deleteTarget) keepLetterButton.current?.focus(); }, [deleteTarget]);
 	const save = useCallback((state: GardenState) => {
 		if (storageBlocked.current) return false;
@@ -236,6 +262,21 @@ export default function Garden() {
 		};
 	}, [panel]);
 
+	useEffect(() => {
+		if (!panel) return;
+		let down: { x: number; y: number } | null = null;
+		const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY }; };
+		const onUp = (e: PointerEvent) => {
+			if (!down) return;
+			const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+			down = null;
+			if (moved > 5) return;
+			if (panelRef.current && !panelRef.current.contains(e.target as Node)) { setPanel(null); setSelected(null); }
+		};
+		document.addEventListener("pointerdown", onDown);
+		document.addEventListener("pointerup", onUp);
+		return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("pointerup", onUp); };
+	}, [panel]);
 	const closePanel = () => {
 		setPanel(null);
 		returnFocus.current?.focus();
@@ -255,6 +296,65 @@ export default function Garden() {
 	}, []);
 	const sceneLoaded = useCallback(() => setSceneReady(true), []);
 	const interact = useCallback(() => setInteracted(true), []);
+	const updateLetter = useCallback((id: string, patch: Partial<Letter>) => {
+		const next: GardenState = { ...clock.current, letters: clock.current.letters.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
+		if (!save(next)) { notify("That change could not be saved in this browser."); return false; }
+		clock.current = next;
+		setGarden(next);
+		return true;
+	}, [save, notify]);
+	const requestSuggestion = async () => {
+		if (!consentInterpret || !draft.body.trim() || interpretState === 'loading') return;
+		setInterpretState('loading');
+		setInterpretError("");
+		try {
+			const response = await fetch('/api/meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'interpret', body: draft.body }) });
+			const data = await response.json().catch(() => null);
+			if (!response.ok || !data?.ok) throw new Error(data?.error || 'Meta personalisation is unavailable right now.');
+			setSuggestion(data.identity as BotanicalIdentity);
+			setSuggestionBody(draft.body);
+			setSuggestionProvenance('live');
+			setInterpretState('idle');
+		} catch (error) {
+			setInterpretState('error');
+			setInterpretError(error instanceof Error ? error.message : 'Meta personalisation is unavailable right now. Your letter is unchanged.');
+		}
+	};
+	const saveReflection = () => {
+		if (!selectedLetter) return;
+		if (updateLetter(selectedLetter.id, { reflection: reflectionDraft })) notify('Reflection saved with your letter.');
+	};
+	const askQuestion = async () => {
+		if (!selectedLetter || reflectionBusy) return;
+		setReflectionBusy('question');
+		setReflectionError("");
+		try {
+			const response = await fetch('/api/meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'question', body: selectedLetter.body }) });
+			const data = await response.json().catch(() => null);
+			if (!response.ok || !data?.ok) throw new Error(data?.error || 'A Meta question is unavailable right now.');
+			updateLetter(selectedLetter.id, { reflectionQuestion: data.question as string });
+		} catch (error) {
+			setReflectionError(error instanceof Error ? error.message : 'A Meta question is unavailable right now.');
+		} finally { setReflectionBusy(null); }
+	};
+	const compareNow = async () => {
+		if (!selectedLetter || reflectionBusy) return;
+		const reflection = reflectionDraft.trim() ? reflectionDraft : selectedLetter.reflection ?? '';
+		if (!reflection.trim()) { setReflectionError('Write a short reflection first, then compare.'); return; }
+		setReflectionBusy('compare');
+		setReflectionError("");
+		updateLetter(selectedLetter.id, { reflection });
+		try {
+			const response = await fetch('/api/meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'compare', original: selectedLetter.body, reflection }) });
+			const data = await response.json().catch(() => null);
+			if (!response.ok || !data?.ok) throw new Error(data?.error || 'The comparison is unavailable right now.');
+			const checked = validateComparison(data.comparison, selectedLetter.body, reflection);
+			if (!checked.ok) throw new Error(`The comparison could not be verified (${checked.error}). Your reflection was saved without it.`);
+			updateLetter(selectedLetter.id, { reflection, comparison: checked.comparison });
+		} catch (error) {
+			setReflectionError(error instanceof Error ? error.message : 'The comparison is unavailable right now. Your reflection was saved without it.');
+		} finally { setReflectionBusy(null); }
+	};
 	const changeClock = (values: Partial<GardenState>) => {
 		clock.current = { ...clock.current, ...values };
 		setGarden(clock.current);
@@ -262,6 +362,8 @@ export default function Garden() {
 	};
 	const plant = (e: React.FormEvent) => {
 		e.preventDefault();
+		if (plantingRef.current) return;
+		if (interpretState === 'loading') { notify('Wait for the tree suggestion to finish before planting.'); return; }
 		if (removalRef.current) return;
 		const state = clock.current;
 		const validation = validateLetter(draft.body, draft.date, state.time);
@@ -275,7 +377,10 @@ export default function Garden() {
 			return;
 		}
 		const reveal = Date.parse(`${draft.date}T12:00:00`);
-		const { seed, species } = chooseTree(crypto.getRandomValues(new Uint32Array(1))[0], draft.tree);
+		plantingRef.current = true;
+		const activeSuggestion = suggestion && suggestionBody === draft.body ? suggestion : null;
+		const rawSeed = crypto.getRandomValues(new Uint32Array(1))[0];
+		const { seed, species } = activeSuggestion ? { seed: seedForTree(rawSeed, activeSuggestion.species), species: activeSuggestion.species } : chooseTree(rawSeed, draft.tree);
 		const planting = nextPlanting(state);
 		const letter = {
 			id: crypto.randomUUID(),
@@ -285,6 +390,7 @@ export default function Garden() {
 			reveal,
 			seed,
       species,
+			...(activeSuggestion ? { identity: activeSuggestion, identityProvenance: suggestionProvenance, generatorVersion: GENERATOR_VERSION } : {}),
 			position: planting.position,
 		};
 		const reducedMotion = window.matchMedia(
@@ -298,6 +404,7 @@ export default function Garden() {
 			playing: !reducedMotion,
 		};
 		if (!save(next)) {
+			plantingRef.current = false;
 			notify(
 				"Your letter is still in the editor. Browser storage could not save it.",
 			);
@@ -306,6 +413,12 @@ export default function Garden() {
 		clock.current = next;
 		setGarden(next);
 		setDraft(emptyDraft);
+		plantingRef.current = false;
+		setSuggestion(null);
+		setSuggestionBody("");
+		setConsentInterpret(false);
+		setInterpretState('idle');
+		setInterpretError("");
 		setSelected(letter.id);
 		setPanel(null);
 		writeButton.current?.focus();
@@ -314,6 +427,23 @@ export default function Garden() {
 				? "A thought planted. Press play when you’re ready to watch it grow."
 				: "A thought planted. Give it a little time.",
 		);
+	};
+	const resetGarden = () => {
+		const next: GardenState = { version: 2, plots: [], letters: [], time: Date.now(), rate: 0, playing: true, speed: 1 };
+		clock.current = next;
+		setGarden(next);
+		save(next);
+		try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable; in-memory reset still applies */ }
+		setDraft(emptyDraft);
+		setSelected(null);
+		setTreeFocus(null);
+		setDeleteTarget(null);
+		setResetConfirm(false);
+		setSuggestion(null);
+		setSuggestionBody("");
+		setPanel(null);
+		writeButton.current?.focus();
+		notify('Garden cleared. A fresh island is waiting.');
 	};
 	const confirmDelete = (id: string) => {
 		if (removalRef.current) return;
@@ -329,8 +459,8 @@ export default function Garden() {
 		clock.current = next;
 		setGarden(next);
 		if (webgl && sceneReady && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-			const { seed, species, position, planted, reveal } = letter;
-			const effect: Removal = { tree: { id, seed, species, position, planted, reveal }, startedAt: performance.now() };
+			const { seed, species, identity, generatorVersion, position, planted, reveal } = letter;
+			const effect: Removal = { tree: { id, seed, species, identity, generatorVersion, position, planted, reveal }, startedAt: performance.now() };
 			removalRef.current = effect;
 			setRemoval(effect);
 		}
@@ -356,6 +486,8 @@ export default function Garden() {
 					: p < 0.7
 						? "Branching out"
 						: "Coming into leaf";
+	const remainingDays = selectedLetter ? Math.max(0, (selectedLetter.reveal - garden.time) / 86400000) : 0;
+	const etaSeconds = selectedLetter && garden.rate > 0 && garden.playing ? Math.max(0, (selectedLetter.reveal - garden.time) / 1000 / (garden.rate * garden.speed)) : null;
 
 	return (
 		<main className={styles.app}>
@@ -416,6 +548,7 @@ export default function Garden() {
 							onRemovalComplete={finishRemoval}
 							clock={clock}
 							selected={selected}
+							treeFocus={treeFocus}
 							onSelect={select}
 							recenter={recenter}
 							editing={panel === "write"}
@@ -714,6 +847,28 @@ export default function Garden() {
 										<option key={species} value={species}>{species === 'Moonveil' ? 'Moonveil (mystical)' : species}</option>
 									))}
 								</select>
+								<div className={styles.metaBox}>
+									<label className={styles.consentRow}>
+										<input type="checkbox" checked={consentInterpret} onChange={(e) => setConsentInterpret(e.target.checked)} />
+										<span><strong>Personalise my tree with Meta AI (optional).</strong> Only if you tick this, your letter text is sent to Meta to propose a tree identity. Your letter still stays saved only in this browser. The explanation can hint at your letter's themes, so only use it with words you are comfortable sharing this way.</span>
+									</label>
+									<div className={styles.metaActions}>
+										{!(suggestion && suggestionBody === draft.body) && (<button type="button" className={styles.secondary} disabled={!consentInterpret || !draft.body.trim() || interpretState === 'loading'} onClick={requestSuggestion}>{interpretState === 'loading' ? 'Asking Meta…' : 'Suggest a tree identity'}</button>)}
+									</div>
+									{interpretState === 'loading' && <p className={styles.fieldHint} role="status">Reading your letter… Your draft stays exactly as written.</p>}
+									{interpretState === 'error' && <div><p className={styles.error} role="alert">{interpretError}</p><button type="button" className={styles.textButton} onClick={requestSuggestion}>Try again</button><span className={styles.fieldHint}> — or just plant an ordinary tree below.</span></div>}
+									{suggestion && suggestionBody !== draft.body && <p className={styles.fieldHint} role="status">Your letter changed, so the earlier suggestion no longer applies. Request a new one, or plant an ordinary tree.</p>}
+									{suggestion && suggestionBody === draft.body && (
+										<div className={styles.metaCard}>
+											<span className={styles.metaBadge}>{suggestionProvenance === 'live' ? 'Live Meta response' : 'Cached fictional example — not a live response'}</span>
+											<p><strong>{suggestion.species}</strong> — {suggestion.intention}</p>
+											<p className={styles.fieldHint}>Themes: {suggestion.themes.join(' · ')}</p>
+											<p>{suggestion.explanation}</p>
+											<p className={styles.fieldHint}>Planting will save this identity with your tree. The random seed still shapes the fine branches, so no two trees are identical.</p>
+											<button type="button" className={`${styles.textButton} ${styles.discardButton}`} onClick={() => { setSuggestion(null); setSuggestionBody(""); }}>Discard — plant an ordinary tree instead</button>
+										</div>
+									)}
+								</div>
 								<div className={styles.plantNote}>
 									<Icon name="sprout" size={20} />
 									<span>
@@ -725,7 +880,7 @@ export default function Garden() {
 								<button
 									type="submit"
 									className={styles.primary}
-									disabled={!!removal}
+									disabled={!!removal || interpretState === 'loading'}
 								>
 									<Icon name="sprout" size={18} />
 									Plant letter <Icon name="arrow" size={17} />
@@ -791,7 +946,21 @@ export default function Garden() {
 										</dd>
 									</div>
 								</dl>
+								{selectedProgress < 1 && (
+									<p className={styles.fieldHint} role="status">
+										About {remainingDays < 1 ? 'less than a day' : `${remainingDays.toFixed(1)} days`} left in demo time{etaSeconds !== null ? ` — roughly ${etaSeconds < 60 ? `${Math.max(1, Math.round(etaSeconds))} seconds` : `${(etaSeconds / 60).toFixed(1)} minutes`} at the current speed while time is playing` : ''}. Simulated time, not a real delivery date.
+									</p>
+								)}
+								{selectedLetter.identity && (
+									<div className={styles.metaCard}>
+										<span className={styles.metaBadge}>{selectedLetter.identityProvenance === 'cached' ? 'Cached fictional example' : selectedLetter.identityProvenance === 'live' ? 'Live Meta identity' : 'Personalised identity'}</span>
+										<p><strong>{selectedLetter.identity.species}</strong> — {selectedLetter.identity.intention}</p>
+										<p className={styles.themesLine}>Themes: {selectedLetter.identity.themes.join(' · ')}</p>
+										<p>{selectedLetter.identity.explanation}</p>
+									</div>
+								)}
 								{selectedProgress >= 1 ? (
+									<>
 									<div className={styles.revealed}>
 										<div>
 											<Icon name="letter" size={18} /> A
@@ -799,6 +968,35 @@ export default function Garden() {
 										</div>
 										<p>{selectedLetter.body}</p>
 									</div>
+										<div className={styles.reflectionBox}>
+											<h3>Reflect, if you like</h3>
+											<p className={styles.fieldHint}>Optional. Your letter stays exactly as written; a reflection never changes or replaces it.</p>
+											{selectedLetter.reflectionQuestion && <p className={styles.reflectionQuestion}>{selectedLetter.reflectionQuestion}</p>}
+											<label htmlFor="reflection">Your reflection now</label>
+											<textarea id="reflection" ref={reflectionRef} rows={3} value={reflectionDraft} onChange={(e) => setReflectionDraft(e.target.value)} placeholder="What do you notice, reading this today?" />
+											<div className={styles.metaActions}>
+												<button type="button" className={styles.secondary} onClick={saveReflection}>Save reflection</button>
+											</div>
+											<h4 className={styles.metaHeading}>With Meta AI</h4>
+											<div className={styles.metaActions}>
+												<button type="button" className={styles.secondary} disabled={reflectionBusy !== null} onClick={askQuestion}>{reflectionBusy === 'question' ? 'Asking Meta…' : 'Ask Meta for a question'}</button>
+											</div>
+										<p className={styles.fieldHint}>Asking sends your original letter to Meta for one reflection question. Separate from comparing, below.</p>
+											<div className={styles.metaActions}>
+												<button type="button" className={styles.secondary} disabled={reflectionBusy !== null} onClick={compareNow}>{reflectionBusy === 'compare' ? 'Comparing…' : 'Compare then and now'}</button>
+											</div>
+										<p className={styles.fieldHint}>Comparing sends your letter and reflection to Meta, using only quotes copied exactly from your own words.</p>
+											{reflectionError && <p className={styles.error} role="alert">{reflectionError}</p>}
+											{selectedLetter.comparison && (
+												<div className={styles.quotePair}>
+													<p><span>Then</span>“{selectedLetter.comparison.originalQuote}”</p>
+													<p><span>Now</span>“{selectedLetter.comparison.reflectionQuote}”</p>
+													<p>{selectedLetter.comparison.observation}</p>
+													<p className={styles.fieldHint}>Quotes checked word-for-word against your texts. What changed — and what it means — is yours to judge.</p>
+												</div>
+											)}
+										</div>
+									</>
 								) : (
 									<div className={styles.waiting}>
 										<Icon name="letter" size={28} />
@@ -853,7 +1051,7 @@ export default function Garden() {
 										{garden.letters.map((l, i) => (
 											<li key={l.id}>
 												<button
-													onClick={() => select(l.id)}
+													onClick={() => { select(l.id); setTreeFocus({ id: l.id, n: Date.now() }); }}
 												>
 													<span
 														className={
@@ -955,6 +1153,25 @@ export default function Garden() {
 									to pan. Click a tree to visit its letter, or
 									choose one in Your letters.
 								</p>
+								<h3>Start over.</h3>
+								<p>
+									Clearing your browser storage while this tab
+									is open will not stick — the garden in this
+									tab saves itself again within seconds. Use
+									this instead: it empties the garden here
+									first, then storage.
+								</p>
+								{resetConfirm ? (
+									<div className={styles.deleteConfirmation} role="group" aria-label="Confirm garden reset">
+										<p>This permanently deletes every letter and tree in this browser. Your atmosphere preferences stay.</p>
+										<div>
+											<button type="button" onClick={() => setResetConfirm(false)}>Keep my garden</button>
+											<button type="button" className={styles.danger} onClick={resetGarden}>Delete everything</button>
+										</div>
+									</div>
+								) : (
+									<button type="button" className={styles.deleteButton} onClick={() => setResetConfirm(true)}>Reset garden and delete all letters</button>
+								)}
 								<button
 									className={styles.secondary}
 									onClick={closePanel}

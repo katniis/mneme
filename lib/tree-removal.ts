@@ -4,7 +4,7 @@ import type { Position } from './terrain.ts';
 import { elementProgress, random, type Vec3, type Voxel } from './tree.ts';
 import type { Organ, VoxelAppearance } from './trees/types.ts';
 
-export type TreeRecord = Pick<Letter, 'id' | 'seed' | 'species' | 'position' | 'planted' | 'reveal'>;
+export type TreeRecord = Pick<Letter, 'id' | 'seed' | 'species' | 'identity' | 'generatorVersion' | 'position' | 'planted' | 'reveal'>;
 export type Removal = { tree: TreeRecord; startedAt: number };
 export type FrozenBlock = {
   sourceIndex: number; position: Vec3; size: Vec3; rotation: Vec3;

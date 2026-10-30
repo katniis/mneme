@@ -2,8 +2,8 @@ import { anatomy } from './skeleton.ts';
 import { colonize } from './colonization.ts';
 import type { Vec3 } from './types.ts';
 
-export function buildBroadleafSkeleton(seed: number, species: 'Oak' | 'Birch' | 'Maple') {
-  const a = anatomy(seed, species), { skeleton, rng, height: h, radius: r, path, dress } = a;
+export function buildBroadleafSkeleton(seed: number, species: 'Oak' | 'Birch' | 'Maple', identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const a = anatomy(seed, species, identity), { skeleton, rng, height: h, radius: r, path, dress } = a;
   const phase = rng() * Math.PI * 2;
   if (species === 'Birch') {
     let leader = 0;

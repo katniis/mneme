@@ -7,6 +7,7 @@ import { buildPineSkeleton } from './trees/pine.ts';
 import { buildSpruceSkeleton } from './trees/spruce.ts';
 import { buildWillowSkeleton } from './trees/willow.ts';
 import { voxelizeTree } from './trees/voxel-builder.ts';
+import { applyIdentity, type BotanicalIdentity } from './meta-identity.ts';
 import type { Voxel } from './trees/types.ts';
 export { random } from './trees/random.ts';
 export type { Vec3, Voxel } from './trees/types.ts';
@@ -23,11 +24,12 @@ export function chooseTree(seed: number, requested: string): { seed: number; spe
   const species = requested === '' ? ALL_TREE_SPECIES[Math.floor(random(seed)() * 9)] : isTreeSpecies(requested) ? requested : treeFamily(seed);
   return { seed: isTreeSpecies(requested) ? seedForTree(seed, requested) : seed, species };
 }
-export function generateTree(seed: number, explicitSpecies?: TreeSpecies): Voxel[] {
-  const species = treeFamily(seed, explicitSpecies);
-  const skeleton = species === 'Oak' || species === 'Birch' || species === 'Maple' ? buildBroadleafSkeleton(seed, species)
-    : species === 'Cherry Blossom' || species === 'Jacaranda' ? buildFloweringSkeleton(seed, species)
-      : species === 'Pine' ? buildPineSkeleton(seed) : species === 'Spruce' ? buildSpruceSkeleton(seed) : species === 'Moonveil' ? buildMoonveilSkeleton(seed) : buildWillowSkeleton(seed);
+export function generateTree(seed: number, explicitSpecies?: TreeSpecies, identity?: BotanicalIdentity): Voxel[] {
+  const species = identity ? identity.species : treeFamily(seed, explicitSpecies);
+  const skeleton = species === 'Oak' || species === 'Birch' || species === 'Maple' ? buildBroadleafSkeleton(seed, species, identity)
+    : species === 'Cherry Blossom' || species === 'Jacaranda' ? buildFloweringSkeleton(seed, species, identity)
+      : species === 'Pine' ? buildPineSkeleton(seed, identity) : species === 'Spruce' ? buildSpruceSkeleton(seed, identity) : species === 'Moonveil' ? buildMoonveilSkeleton(seed, identity) : buildWillowSkeleton(seed, identity);
+  if (identity) applyIdentity(skeleton, identity, seed);
   return voxelizeTree(skeleton, seed, species);
 }
 export function elementProgress(

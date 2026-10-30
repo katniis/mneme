@@ -154,3 +154,4 @@ screenshots/
 .playwright-mcp/
 .superpowers/
 docs/
+graphify-out/

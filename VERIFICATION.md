@@ -371,3 +371,11 @@ Optional browser verification uses an installed Playwright module and browser. S
 - Routed music through its own gain node. Muting music leaves generated bird/insect calls independent. Each load requests unmuted playback at the default mix volume; legacy saved volume is no longer used by this interface.
 - Startup requests AudioContext playback once the garden is available and preloads its seasonal track. When browser autoplay permission prevents playback, pointer/keyboard gestures retry resume. Existing hidden-tab, atmosphere-off, WebGL-loss and unmount resource handling is retained.
 - Source changes were reviewed directly. Per the user's explicit request, **tests, typecheck, build, Playwright, runtime listening and visual checks were not run** for this change. Earlier verification results above describe the preceding implementation.
+
+## Meta personalisation and reflection — 30 October 2026
+
+- `npm test`: 107 passing, 0 failing, including five new identity cases in `tests/identity.test.ts` (validation accept/reject matrix, stored-identity sanitisation without discarding letters, same-seed/same-identity reproducibility with visibly different structure for a different identity, legacy seed-only shape preservation, and exact-quote reflection verification including rejection of fabricated quotes and stored comparisons).
+- `npm run typecheck`: passed. `npm run build`: passed; routes are `/` (static) and `/api/meta` (dynamic).
+- Determinism probe (seed 1024, Oak): same identity reproduced identical voxels; a contrasting identity changed height (5.92 → 6.73), crown width (2.69 → 3.94), and voxel count, while the seed-only tree was unchanged.
+- Production server (`npm start`, port 3000) returned HTTP 200. Live `POST /api/meta` checks with a fictional letter only: `interpret` returned a validated Birch identity with `provenance: "live"`; `question` returned one grounded question; `compare` returned quotes verified verbatim against both source texts server-side. No real letters were sent; raw letters are not logged by the route.
+- Not yet done: browser click-through of the new editor/details panels, desktop/mobile screenshots of personalised trees, and recapture of the species/growth screenshot set. Treat panel behaviour as code-reviewed and API-verified, not yet visually verified.

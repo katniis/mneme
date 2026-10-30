@@ -1,7 +1,9 @@
 import { placement, type Position } from './terrain.ts';
 import { isTreeSpecies, type TreeSpecies } from './trees/profiles.ts';
+import { sanitizeStoredIdentity, validateComparison, type BotanicalIdentity, type ReflectionComparison } from './meta-identity.ts';
 export const STORAGE_KEY = "mneme-garden-v1";
 export const DRAFT_KEY = "mneme-draft-v1";
+export type { BotanicalIdentity, ReflectionComparison };
 export type Letter = {
 	id: string;
 	title: string;
@@ -10,6 +12,12 @@ export type Letter = {
 	reveal: number;
 	seed: number;
   species?: TreeSpecies;
+  identity?: BotanicalIdentity;
+  identityProvenance?: 'live' | 'cached';
+  generatorVersion?: number;
+  reflection?: string;
+  reflectionQuestion?: string;
+  comparison?: ReflectionComparison;
 	position: Position;
 };
 export type GardenState = {
@@ -100,6 +108,12 @@ export function readGarden(raw: string | null): GardenState | null {
 				return null;
 			ids.add(l.id);
       if ('species' in l && !isTreeSpecies(l.species)) delete l.species;
+      if ('identity' in l) { const clean = sanitizeStoredIdentity(l.identity); if (clean) { l.identity = clean; if (!isTreeSpecies(l.species)) l.species = clean.species; } else delete l.identity; }
+      if ('identityProvenance' in l && l.identityProvenance !== 'live' && l.identityProvenance !== 'cached') delete l.identityProvenance;
+      if ('generatorVersion' in l && (!Number.isInteger(l.generatorVersion) || l.generatorVersion < 1)) delete l.generatorVersion;
+      if ('reflection' in l && typeof l.reflection !== 'string') delete l.reflection;
+      if ('reflectionQuestion' in l && typeof l.reflectionQuestion !== 'string') delete l.reflectionQuestion;
+      if ('comparison' in l) { const checked = typeof l.reflection === 'string' ? validateComparison(l.comparison, l.body, l.reflection) : { ok: false as const }; if (checked.ok) l.comparison = checked.comparison; else delete l.comparison; }
 		}
 		const plots = state.version === 1 ? state.letters.map((l: Letter) => l.position) : state.plots;
 		if (!Array.isArray(plots) || plots.some(p => !Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite))) return null;

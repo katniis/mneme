@@ -1,7 +1,7 @@
 import { anatomy } from './skeleton.ts';
 
-export function buildFloweringSkeleton(seed: number, species: 'Cherry Blossom' | 'Jacaranda') {
-  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, species);
+export function buildFloweringSkeleton(seed: number, species: 'Cherry Blossom' | 'Jacaranda', identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, species, identity);
   const cherry = species === 'Cherry Blossom', phase = rng() * 6.28;
   const bole = path(0, [.06, h * (cherry ? .26 : .46), -.04], cherry ? .15 : .17, 'trunk', 5);
   for (let b = 0; b < 6; b++) {

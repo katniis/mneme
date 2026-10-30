@@ -1,7 +1,7 @@
 import { anatomy } from './skeleton.ts';
 
-export function buildMoonveilSkeleton(seed: number) {
-  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Moonveil');
+export function buildMoonveilSkeleton(seed: number, identity?: import('../meta-identity.ts').BotanicalIdentity) {
+  const { skeleton, rng, height: h, radius: r, path, dress, site } = anatomy(seed, 'Moonveil', identity);
   const phase = rng() * 6.28;
   for (const strand of [0, 1]) {
     let stem = 0;
