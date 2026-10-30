@@ -1,89 +1,171 @@
-# Mneme
+<div align="center">
 
-A letter for tomorrow. A little life for today.
+![Mneme header](https://capsule-render.vercel.app/api?type=waving&color=0:0f2a1a,35:1b4332,65:2d6a4f,100:40916c&height=240&section=header&text=MNEME&fontSize=84&fontColor=ffffff&fontAlignY=35&desc=A%20letter%20for%20tomorrow.%20A%20little%20life%20for%20today.&descSize=17&descAlignY=55&animation=twinkling&fontFamily=Papyrus,%20Georgia,%20serif)
 
-Mneme is a working, browser-local 3D garden. Write a letter, choose a reveal date, and watch a seeded voxel tree grow on a textured floating island. The garden starts empty; letters in the screenshots were written during testing.
+> **Write a letter. Plant it. Watch it grow.**
+> Mneme is a browser-local 3D garden where every letter becomes a seeded voxel tree on a floating island — and only opens on its reveal date.
 
-## Run
+<br />
 
-Use Node.js 24, the version used for verification.
+![Next.js](https://img.shields.io/badge/Next.js-16.4-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Three.js](https://img.shields.io/badge/Three.js-0.182-000000?style=for-the-badge&logo=threedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![License MIT](https://img.shields.io/badge/License-MIT-2d6a4f?style=for-the-badge)
 
-```powershell
-cd C:\Users\jbree\pelican-test\mneme
+![Stars](https://img.shields.io/github/stars/katniis/mneme?style=flat-square&color=2d6a4f)
+![Forks](https://img.shields.io/github/forks/katniis/mneme?style=flat-square&color=2d6a4f)
+![Last commit](https://img.shields.io/github/last-commit/katniis/mneme?style=flat-square&color=2d6a4f)
+
+</div>
+
+---
+
+## 🌿 Why Mneme?
+
+Some messages shouldn't be read right away.
+
+Mneme turns a future letter — to yourself, or to someone you love — into something living. You write it, pick a reveal date, and a unique tree starts growing from its seed on a shared floating island. Day by day (on Mneme's demo clock) it sprouts, branches, and leafs out. When the reveal date arrives, the tree is mature and the letter finally opens.
+
+No accounts. No cloud. No feed. Just a quiet garden that lives entirely in your browser.
+
+## ✨ Features
+
+- 🌱 **Letters that grow** — Every letter gets one persistent seed and position, growing into an oak, birch, or maple-inspired tree. Wood, twigs, petioles, and leaf blades develop in dependency order — nothing pops in or swaps models.
+- 🏝️ **A living island** — Connected terrain extends around permanent tree positions, with textured soil, grass, tapered rock, pebbles, tufts, and flowers. New ground forms *before* a new sprout appears, thickening into one continuous island.
+- 🕰️ **One shared demo clock** — A letter planted today reaches its reveal date in ~50 seconds of garden time. Pause, 0.5×, 1×, 2×, and 4× controls are real, and old trees keep their growth when new letters are planted.
+- 🌤️ **Atmosphere that follows your day** — Real local time, season, and weather (optional Open-Meteo) drive sky, lighting, rain, snow, pollen, petals, and fireflies — each with independent Auto/manual control and per-effect switches. Manual choices work fully offline.
+- 🎵 **Generated nature sounds** — Optional Web Audio soundscapes (breeze, rain, birds, insects) synthesized in-browser. No audio files, no microphone, no external service.
+- 🖱️ **Full 3D, fully usable** — Orbit, zoom, and pan on desktop and touch; click/tap a tree or pick it from a keyboard-accessible list; recenter anytime. Letters stay readable even without WebGL.
+- 💾 **Private by design** — Everything lives in `localStorage`. Letters are never sent anywhere — weather lookups send only an approximate location or city name, never letter content.
+- ♿ **Considerate by default** — Mobile bottom sheets, focus management, inline form errors, draft autosave, and reduced-motion support that quiets particles while keeping lighting and ground cover.
+
+<div align="center">
+
+![Grow with Mneme](https://capsule-render.vercel.app/api?type=soft&color=0:1b4332,100:40916c&height=90&text=plant%20%E2%80%A2%20write%20%E2%80%A2%20wait%20%E2%80%A2%20reveal&fontSize=22&fontColor=ffffff&fontFamily=Papyrus,%20Georgia,%20serif)
+
+</div>
+
+## 📸 The Garden
+
+<div align="center">
+
+![Trees baseline at 1440px](screenshots/trees-baseline-1440.png)
+
+</div>
+
+> 🎥 Prefer motion? Watch [the growth preview](recordings/mneme-growth.mp4) — a frame-sampled recording of the live 4× simulation. Full check-by-check detail lives in [VERIFICATION.md](VERIFICATION.md).
+
+## 🚀 Quickstart
+
+**Requirements:** Node.js 24
+
+```bash
+git clone https://github.com/katniis/mneme.git
+cd mneme
 npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) — your garden starts empty. Write your first letter and plant it.
 
-For the production build:
+**Production build:**
 
-```powershell
+```bash
 npm run build
 npm start
 ```
 
-Stop the development server before starting production on the same port. The verified production preview for this session runs at [localhost:3001](http://localhost:3001). Storage belongs to an origin: port 3000 and port 3001 have separate gardens.
+> Stop the dev server before starting production on the same port. Storage belongs to an origin, so `localhost:3000` and `localhost:3001` keep separate gardens.
 
-No environment variables, credentials, API routes, accounts, or backend are required. Existing sibling folders, Git metadata, and environment files were left alone.
+No environment variables, credentials, API routes, accounts, or backend are required.
 
-## What works
+## 🌻 How It Works
 
-- Real Three.js geometry with React Three Fiber, soft shadows, seeded pixel materials, grass, soil, tapered rock, pebbles, tufts, and flowers.
-- Drag to orbit, wheel/pinch to zoom, right-drag or Shift-drag to pan, one-finger touch orbit, and a Recenter action. Rotation is manual.
-- Required letter content, optional titles, future-date validation, preserved formatting, and drafts saved while typing.
-- One persistent seed and position per letter, with oak, birch, and maple-inspired branching. Wood, fine twigs, petioles, and leaf blades develop from completed supports rather than changing between models.
-- One shared demo clock. A letter planted at 1× reaches its own reveal date in approximately 50 seconds. Pause, 0.5×, 1×, 2×, and 4× controls are real. Old trees retain their growth when a new letter is planted.
-- Connected terrain extends around permanent tree positions. Its underside uses distance from the whole island's shoreline, with a shared rock spine reinforcing narrow joins. New rock grows down from supported layers, thickening existing ground into one continuous body. New supporting ground forms before the new sprout appears.
-- Click/tap a tree or select its letter from the keyboard-accessible list. Details show dates and growth; original text appears at the simulated reveal date.
-- Local persistence, mobile bottom sheets, focus management, adjacent form errors, reduced-motion support, and readable saved letters without WebGL.
+1. **Write** — A letter (title optional), with formatting preserved. Drafts autosave while you type.
+2. **Choose a reveal date** — Must be in the future; validation is inline and friendly.
+3. **Plant** — Your letter gets a permanent seed and island position. A tree begins to grow on the shared demo clock.
+4. **Watch it grow** — Click or tap the tree anytime to see its dates and growth stage.
+5. **Reveal** — At the simulated reveal date, the tree is mature and the original letter opens.
 
-## Your data
+## 🛠️ Tech Stack
 
-Environment settings can follow your real local day and night independently of demo growth time, or let you choose time of day, island season, and weather separately. Each group has an Auto option, and manual choices work offline. Seasonal island colours and local rain use an optional location or selected city; there is a master switch and a switch for each effect. Weather is approximate, model-derived Open-Meteo data. No location prompt or weather request occurs before setup. Choosing a location sends approximate coordinates to Open-Meteo; city searches send the city name. Letters are never included.
+| Layer | Technology |
+| :--- | :--- |
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, TypeScript 5.9, CSS Modules |
+| 3D | Three.js, React Three Fiber, Drei |
+| Audio | Generated Web Audio (no audio files) |
+| Weather | Open-Meteo (optional, no API key) |
+| Storage | Browser `localStorage` only |
 
-`mneme-environment-v1` stores these preferences and the chosen approximate location; `mneme-weather-v1` stores weather cache data. Clear location removes that cache. Turning effects off retains the individual preferences. Sky colours, lighting, and stars represent day and night; overcast weather changes atmospheric lighting. No cloud geometry or sun/moon models are loaded.
+No external fonts or image services are needed — textures and geometry are generated locally.
 
-Living details adds restrained seasonal pollen, petals, leaves and warm-season evening fireflies. Petals/leaves come from visible, appropriate foliage; they do not remove tree blocks. Snow includes drifting flakes throughout the surrounding view and cosmetic ground cover, independently of the chosen season. Clear, Light rain, Heavy rain and Snow have manual choices; old Cloudy selections become Clear. Reduced motion hides moving particles while retaining static ground/lighting. Environment preference version 3 migrates older settings without touching letters.
+## 📁 Project Structure
 
-Nature sounds is optional generated Web Audio: soft breeze/rain textures and stylized bird/insect calls follow the selected time, season and weather. It starts Off on every load and creates no audio session before you enable it. `mneme-audio-v1` remembers volume only. Hidden tabs, atmosphere off and unavailable WebGL pause playback; Off closes the session. No audio files, microphone permission or external sound service are used.
-
-Only browser local storage is used. `mneme-garden-v1` stores the letters, seeds, positions, and simulation state; `mneme-draft-v1` stores the draft. Rendering caches and GPU geometry stay in memory.
-
-This is a **local prototype**. Content is not encrypted. The reveal date is a demonstration, not a secure lock. Clearing browser data deletes the garden. There is no cloud sync or backup. The simulation pauses when the document is hidden and does not catch up to real-world time after reopening.
-
-## Checks and captures
-
-```powershell
-npm test
-npm run typecheck
-npm run build
+```text
+app/          Next.js App Router entry points, layout, global CSS
+components/   Garden (interface + persistence), Scene (Three.js world), Tree (growth/removal)
+  environment/  Atmosphere controls, weather orchestration, lighting/sky, particles, audio lifecycle
+lib/          Deterministic garden/clock, tree/terrain/removal, environment/daylight/particle logic
+tests/        Deterministic logic tests (node:test)
+screenshots/  Visual evidence
+recordings/   Growth preview video
 ```
 
-All seven Node test groups passed. They cover seed determinism and variation, physical parent attachment and growth ordering across seven seeds, connected expansion and stable terrain positions, coastline irregularity, a connected deep rock core at every addition from two to eight trees, shared-clock boundaries and pause/visibility rules, date validation, and malformed storage.
-
-Browser checks covered empty → editor → planting → sprout → intermediate growth → maturity → exact letter reveal, gardens with one/three/eight trees, orbit and wheel zoom, click versus drag, 3D picking, reload persistence, validation, draft recovery, keyboard selection and Escape, mobile layout, emulated one-finger orbit and pinch, reduced motion, and WebGL fallback with saved letters. The production page had zero console errors or warnings in the final browser session.
-
-The visual inspector passed at 1440, 768, and 390 pixels with zero failures. Two advisories remain: functional icon buttons are detected as tinted squares, and mobile metadata uses 11–12px text. The icon buttons operate the camera, information panel, and playback; headings and primary content remain larger.
-
-See [the verification notes](VERIFICATION.md), [screenshots](screenshots/), and [the growth preview](recordings/mneme-growth.mp4). The video is a frame-sampled recording of the live 4× simulation, encoded at 24 fps; it is not a smooth-frame-rate performance measurement.
-
-## Implementation
-
-Next.js App Router, React, TypeScript, CSS Modules, Three.js, React Three Fiber, and Drei. No external fonts or image services are needed.
-
 | File | Responsibility |
-| --- | --- |
-| `lib/garden.ts` | Data schema, storage validation, dates, and shared-clock math |
-| `lib/tree.ts` | Seeded anatomy and dependency-aware growth schedule |
-| `lib/terrain.ts` | Permanent placement, topography, materials, and connected terrain |
-| `components/Scene.tsx` | Instanced geometry, lighting, growth transforms, picking, and camera |
-| `components/Garden.tsx` | Persistence, simulation, letters, drafts, and interface |
+| :--- | :--- |
+| [`lib/garden.ts`](lib/garden.ts) | Data schema, storage validation, dates, shared-clock math |
+| [`lib/tree.ts`](lib/tree.ts) | Seeded anatomy and dependency-aware growth schedule |
+| [`lib/terrain.ts`](lib/terrain.ts) | Permanent placement, topography, materials, connected terrain |
+| [`components/Scene.tsx`](components/Scene.tsx) | Instanced geometry, lighting, growth transforms, picking, camera |
+| [`components/Garden.tsx`](components/Garden.tsx) | Persistence, simulation, letters, drafts, interface |
 
-Tree data is generated once per seed for the current scene. Each tree uses one instanced mesh; terrain uses another. Stable terrain matrices are not rewritten every frame. Mature trees stop updating their growth matrices.
+Each tree and the terrain each render as a single instanced mesh; stable matrices aren't rewritten every frame, and mature trees stop updating.
 
-## Remaining limits
+## 🔒 Your Data
 
-The art uses constrained botanical archetypes rather than species-accurate models. Some crowns overlap in projection as you orbit. Synthetic 1- and 49-tree gardens were exercised on desktop and mobile emulation; physical mobile hardware, real software-keyboard behavior, screen readers, and long-session GPU performance were not tested. There is no LOD system for very large gardens. If the browser loses an already-running WebGL context, recovery depends on the browser; reload retains saved letters.
+Only browser local storage is used:
 
-No backend, accounts, cloud storage or AI processing is used. Wind affects decorative particles and generated sound rather than deforming tree geometry. Audio timbre has digital signal checks and saved audition samples; subjective listening and physical-device performance still need human/device review.
+| Key | Stores |
+| :--- | :--- |
+| `mneme-garden-v1` | Letters, seeds, positions, simulation state |
+| `mneme-draft-v1` | The in-progress draft |
+| `mneme-environment-v1` | Environment preferences + chosen approximate location |
+| `mneme-weather-v1` | Weather cache (cleared when location is cleared) |
+| `mneme-audio-v1` | Soundtrack volume only |
+
+**Be aware:** this is a local prototype. Content is not encrypted, the reveal date is a demonstration rather than a secure lock, and clearing browser data deletes the garden. There is no cloud sync or backup. The simulation pauses when the tab is hidden and doesn't catch up to real-world time on reopening.
+
+Location is only requested through an explicit setup action, and only when active effects need it.
+
+## ✅ Checks
+
+```bash
+npm test           # deterministic logic tests (node:test)
+npm run typecheck  # TypeScript, no emit
+npm run build      # production build
+```
+
+Tests cover seed determinism, physical attachments, connected terrain, retained land/reuse, clock boundaries, storage validation, time/season/weather resolution and migrations, particle bounds/collision, and deterministic sound profiles.
+
+## ⚠️ Limitations
+
+- Botanical archetypes are constrained, not species-accurate; some crowns overlap in projection as you orbit.
+- No LOD system yet for very large gardens.
+- Physical mobile hardware, real software-keyboard behavior, screen readers, and long-session GPU performance haven't been tested (desktop + mobile emulation have).
+- Wind affects particles and sound rather than deforming tree geometry; audio timbre still awaits human/device listening review.
+- If the browser loses a running WebGL context, recovery depends on the browser — reload keeps your saved letters.
+
+
+## 📄 License
+
+[MIT](LICENSE) © 2026 Justine
+
+<div align="center">
+
+![Mneme footer](https://capsule-render.vercel.app/api?type=waving&color=0:40916c,50:2d6a4f,100:0f2a1a&height=140&section=footer&text=thanks%20for%20visiting%20the%20garden%20%F0%9F%8C%B1&fontSize=18&fontColor=ffffff&fontAlignY=65&fontFamily=Papyrus,%20Georgia,%20serif)
+
+**[Mneme](https://github.com/katniis/mneme)** — a letter for tomorrow, a little life for today.
+
+</div>
