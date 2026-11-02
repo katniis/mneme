@@ -26,11 +26,11 @@
 
 ---
 
-> 🏆 **Hackathon entry — [Meta AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)** · Theme: *Build for Your World*
+>  **Hackathon entry — [Meta AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)** · Theme: *Build for Your World*
 >
 > Mneme is powered by **Meta AI via the Meta Model API**: with your consent, Meta reads your letter's intention and designs the tree that grows from it — then, at reveal, helps you reflect on how far you've come. See [Powered by Meta AI](#-powered-by-meta-ai) below.
 
-## 🌿 Why Mneme?
+##  Why Mneme?
 
 Some messages shouldn't be read right away.
 
@@ -38,7 +38,7 @@ Mneme turns a future letter — to yourself, or to someone you love — into som
 
 No accounts. No cloud. No feed. Just a quiet garden that lives entirely in your browser.
 
-## 🤖 Powered by Meta AI
+##  Powered by Meta AI
 
 **This is the hackathon core of Mneme: Meta AI gives every tree its meaning.**
 
@@ -56,9 +56,9 @@ Most AI features generate text or images. Mneme does something different — Met
 
 | Capability | API action | What happens |
 | :--- | :--- | :--- |
-| 🌳 **Personalise my tree** | `interpret` | Meta reads your letter and proposes a `BotanicalIdentity`: a concise intention, 1–3 themes, a species, bounded form traits, and a short explanation of the symbolism. You can review and correct it before planting. |
-| ❓ **Reflection question** | `question` | When your tree matures, Meta generates a personal reflection question grounded in your original letter. |
-| 🔍 **Then vs. now** | `compare` | Meta places exact quotes from your original letter beside your present reflection, with a brief, tentative comparison — so you can see what changed. |
+|  **Personalise my tree** | `interpret` | Meta reads your letter and proposes a `BotanicalIdentity`: a concise intention, 1–3 themes, a species, bounded form traits, and a short explanation of the symbolism. You can review and correct it before planting. |
+|  **Reflection question** | `question` | When your tree matures, Meta generates a personal reflection question grounded in your original letter. |
+|  **Then vs. now** | `compare` | Meta places exact quotes from your original letter beside your present reflection, with a brief, tentative comparison — so you can see what changed. |
 
 The accepted identity shapes the tree itself through [`applyIdentity()`](lib/meta-identity.ts) — trunk shape (`straight` / `curved` / `twisted` / `branching`), crown shape, branching style, foliage density, and height variation — within one of 8 species: **Oak, Birch, Maple, Cherry Blossom, Weeping Willow, Pine, Jacaranda, and Spruce**. Your persistent seed then adds individual branch, twig, and leaf detail, so two letters with the same theme never grow identical trees.
 
@@ -81,17 +81,17 @@ META_API_BASE_URL=https://api.meta.ai/v1
 
 The model is selected via `META_MODEL_ID` — see [MNEME.md](MNEME.md) for the planned Muse Spark series integration and the full hackathon product direction. Without these variables the garden works fully; only Meta personalisation is disabled.
 
-## ✨ Features
+##  Features
 
-- 🤖 **Meta AI-personalised trees** — With your consent, Meta AI turns your letter's intention into a validated botanical identity (species, form, symbolism) that shapes the actual 3D tree you grow — plus a reflection question and then-vs-now comparison at reveal. See [Powered by Meta AI](#-powered-by-meta-ai).
-- 🌱 **Letters that grow** — Every letter gets one persistent seed and position, growing into an oak, birch, or maple-inspired tree. Wood, twigs, petioles, and leaf blades develop in dependency order — nothing pops in or swaps models.
-- 🏝️ **A living island** — Connected terrain extends around permanent tree positions, with textured soil, grass, tapered rock, pebbles, tufts, and flowers. New ground forms *before* a new sprout appears, thickening into one continuous island.
-- 🕰️ **One shared demo clock** — A letter planted today reaches its reveal date in ~50 seconds of garden time. Pause, 0.5×, 1×, 2×, and 4× controls are real, and old trees keep their growth when new letters are planted.
-- 🌤️ **Atmosphere that follows your day** — Real local time, season, and weather (optional Open-Meteo) drive sky, lighting, rain, snow, pollen, petals, and fireflies — each with independent Auto/manual control and per-effect switches. Manual choices work fully offline.
-- 🎵 **Generated nature sounds** — Optional Web Audio soundscapes (breeze, rain, birds, insects) synthesized in-browser. No audio files, no microphone, no external service.
-- 🖱️ **Full 3D, fully usable** — Orbit, zoom, and pan on desktop and touch; click/tap a tree or pick it from a keyboard-accessible list; recenter anytime. Letters stay readable even without WebGL.
-- 💾 **Private by design** — Everything lives in `localStorage`. By default letters are never sent anywhere (weather lookups send only an approximate location or city name); the sole exception is Meta personalisation, and only when you explicitly opt in.
-- ♿ **Considerate by default** — Mobile bottom sheets, focus management, inline form errors, draft autosave, and reduced-motion support that quiets particles while keeping lighting and ground cover.
+-  **Meta AI-personalised trees** — With your consent, Meta AI turns your letter's intention into a validated botanical identity (species, form, symbolism) that shapes the actual 3D tree you grow — plus a reflection question and then-vs-now comparison at reveal. See [Powered by Meta AI](#-powered-by-meta-ai).
+- **Letters that grow** — Every letter gets one persistent seed and position, growing into an oak, birch, or maple-inspired tree. Wood, twigs, petioles, and leaf blades develop in dependency order — nothing pops in or swaps models.
+-  **A living island** — Connected terrain extends around permanent tree positions, with textured soil, grass, tapered rock, pebbles, tufts, and flowers. New ground forms *before* a new sprout appears, thickening into one continuous island.
+-  **One shared demo clock** — A letter planted today reaches its reveal date in ~50 seconds of garden time. Pause, 0.5×, 1×, 2×, and 4× controls are real, and old trees keep their growth when new letters are planted.
+-  **Atmosphere that follows your day** — Real local time, season, and weather (optional Open-Meteo) drive sky, lighting, rain, snow, pollen, petals, and fireflies — each with independent Auto/manual control and per-effect switches. Manual choices work fully offline.
+-  **Generated nature sounds** — Optional Web Audio soundscapes (breeze, rain, birds, insects) synthesized in-browser. No audio files, no microphone, no external service.
+-  **Full 3D, fully usable** — Orbit, zoom, and pan on desktop and touch; click/tap a tree or pick it from a keyboard-accessible list; recenter anytime. Letters stay readable even without WebGL.
+-  **Private by design** — Everything lives in `localStorage`. By default letters are never sent anywhere (weather lookups send only an approximate location or city name); the sole exception is Meta personalisation, and only when you explicitly opt in.
+-  **Considerate by default** — Mobile bottom sheets, focus management, inline form errors, draft autosave, and reduced-motion support that quiets particles while keeping lighting and ground cover.
 
 <div align="center">
 
@@ -99,7 +99,7 @@ The model is selected via `META_MODEL_ID` — see [MNEME.md](MNEME.md) for the p
 
 </div>
 
-## 📸 The Garden
+##  The Garden
 
 <div align="center">
 
@@ -107,9 +107,9 @@ The model is selected via `META_MODEL_ID` — see [MNEME.md](MNEME.md) for the p
 
 </div>
 
-> 🎥 Prefer motion? Watch [the growth preview](recordings/mneme-growth.mp4) — a frame-sampled recording of the live 4× simulation. Full check-by-check detail lives in [VERIFICATION.md](VERIFICATION.md).
+>  Prefer motion? Watch [the growth preview](recordings/mneme-growth.mp4) — a frame-sampled recording of the live 4× simulation. Full check-by-check detail lives in [VERIFICATION.md](VERIFICATION.md).
 
-## 🚀 Quickstart
+##  Quickstart
 
 **Requirements:** Node.js 24
 
@@ -133,7 +133,7 @@ npm start
 
 No accounts or backend are required for the core garden. **Meta AI personalisation is optional** — to enable it, add `META_API_KEY`, `META_MODEL_ID`, and `META_API_BASE_URL` to `.env.local` (see [Powered by Meta AI](#-powered-by-meta-ai)). Without them, planting an ordinary seeded tree still works.
 
-## 🌻 How It Works
+##  How It Works
 
 1. **Write** — A letter (title optional), with formatting preserved. Drafts autosave while you type.
 2. **Personalise (optional)** — Tick the Meta AI consent box and Meta proposes a botanical identity for your letter. Review or correct it — or skip it entirely for an ordinary tree.
@@ -142,7 +142,7 @@ No accounts or backend are required for the core garden. **Meta AI personalisati
 5. **Watch it grow** — Click or tap the tree anytime to see its dates and growth stage.
 6. **Reveal & reflect** — At the simulated reveal date, the tree is mature and the original letter opens — with an optional Meta-generated reflection question and then-vs-now comparison.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 | :--- | :--- |
@@ -156,7 +156,7 @@ No accounts or backend are required for the core garden. **Meta AI personalisati
 
 No external fonts or image services are needed — textures and geometry are generated locally.
 
-## 📁 Project Structure
+##  Project Structure
 
 ```text
 app/          Next.js App Router entry points, layout, global CSS
@@ -180,7 +180,7 @@ recordings/   Growth preview video
 
 Each tree and the terrain each render as a single instanced mesh; stable matrices aren't rewritten every frame, and mature trees stop updating.
 
-## 🔒 Your Data
+##  Your Data
 
 Only browser local storage is used:
 
@@ -198,7 +198,7 @@ Location is only requested through an explicit setup action, and only when activ
 
 **Meta AI exception:** letter text is sent to Meta only when you opt in — ticking the personalisation consent, or explicitly requesting a Meta reflection question/comparison. It is never sent by default, and letters are still only saved in your browser.
 
-## ✅ Checks
+##  Checks
 
 ```bash
 npm test           # deterministic logic tests (node:test)
@@ -208,7 +208,7 @@ npm run build      # production build
 
 Tests cover seed determinism, physical attachments, connected terrain, retained land/reuse, clock boundaries, storage validation, time/season/weather resolution and migrations, particle bounds/collision, and deterministic sound profiles.
 
-## ⚠️ Limitations
+##  Limitations
 
 - Botanical archetypes are constrained, not species-accurate; some crowns overlap in projection as you orbit.
 - No LOD system yet for very large gardens.
@@ -217,7 +217,7 @@ Tests cover seed determinism, physical attachments, connected terrain, retained 
 - If the browser loses a running WebGL context, recovery depends on the browser — reload keeps your saved letters.
 
 
-## 📄 License
+##  License
 
 [MIT](LICENSE) © 2026 Justine
 
